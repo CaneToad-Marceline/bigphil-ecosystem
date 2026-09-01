@@ -4,7 +4,7 @@ import { useCartStore } from '@/lib/store/useCartStore'
 import { printReceipt } from '@/lib/printer/thermal'
 
 export default function CartDrawer() {
-  const { items, updateQuantity, totalPrice, clearCart } = useCartStore()
+  const { items, updateQuantity, totalPrice, clearCart, orderType } = useCartStore()
 
   const formatRupiah = (number: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -22,7 +22,11 @@ export default function CartDrawer() {
       alert("Cetak struk berhasil!")
       clearCart()
     } catch (error: any) {
-      alert(`Gagal mencetak: ${error.message}`)
+      if (error.message.includes('globally disabled')) {
+        alert("Gagal mencetak: Web Bluetooth dinonaktifkan di browser Anda.\n\nJika Anda menggunakan Brave Browser, silakan aktifkan di brave://settings/privacy (cari Web Bluetooth) atau gunakan Google Chrome.")
+      } else {
+        alert(`Gagal mencetak: ${error.message}\n\nPastikan Anda menggunakan Google Chrome dan Bluetooth PC/HP Anda menyala.`)
+      }
     }
   }
 
@@ -39,29 +43,32 @@ export default function CartDrawer() {
             <p>Keranjang masih kosong</p>
           </div>
         ) : (
-          items.map((item) => (
-            <div key={item.id} className="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-100">
-              <div className="flex-1 pr-2">
-                <h4 className="font-medium text-slate-800">{item.name}</h4>
-                <p className="text-sm text-blue-600 font-semibold">{formatRupiah(item.price)}</p>
+          items.map((item) => {
+            const currentPrice = orderType === 'offline' ? item.priceOffline : item.priceMerchant;
+            return (
+              <div key={item.id} className="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-100">
+                <div className="flex-1 pr-2">
+                  <h4 className="font-medium text-slate-800">{item.name}</h4>
+                  <p className="text-sm text-blue-600 font-semibold">{formatRupiah(currentPrice)}</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button 
+                    onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                    className="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 rounded-md text-slate-600 active:bg-slate-100 font-bold"
+                  >
+                    -
+                  </button>
+                  <span className="font-semibold w-4 text-center">{item.quantity}</span>
+                  <button 
+                    onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                    className="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 rounded-md text-slate-600 active:bg-slate-100 font-bold"
+                  >
+                    +
+                  </button>
+                </div>
               </div>
-              <div className="flex items-center gap-3">
-                <button 
-                  onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                  className="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 rounded-md text-slate-600 active:bg-slate-100 font-bold"
-                >
-                  -
-                </button>
-                <span className="font-semibold w-4 text-center">{item.quantity}</span>
-                <button 
-                  onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                  className="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 rounded-md text-slate-600 active:bg-slate-100 font-bold"
-                >
-                  +
-                </button>
-              </div>
-            </div>
-          ))
+            )
+          })
         )}
       </div>
 

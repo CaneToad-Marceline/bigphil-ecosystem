@@ -3,7 +3,8 @@ import { create } from 'zustand'
 export interface Product {
   id: string
   name: string
-  price: number
+  priceOffline: number
+  priceMerchant: number
   stock: number
   image_url?: string
 }
@@ -12,8 +13,12 @@ export interface CartItem extends Product {
   quantity: number
 }
 
+export type OrderType = 'offline' | 'merchant'
+
 interface CartStore {
   items: CartItem[]
+  orderType: OrderType
+  setOrderType: (type: OrderType) => void
   addItem: (product: Product) => void
   removeItem: (productId: string) => void
   updateQuantity: (productId: string, quantity: number) => void
@@ -23,6 +28,8 @@ interface CartStore {
 
 export const useCartStore = create<CartStore>((set, get) => ({
   items: [],
+  orderType: 'offline',
+  setOrderType: (type) => set({ orderType: type }),
   addItem: (product) => {
     set((state) => {
       const existingItem = state.items.find((item) => item.id === product.id)
@@ -59,6 +66,10 @@ export const useCartStore = create<CartStore>((set, get) => ({
   },
   clearCart: () => set({ items: [] }),
   totalPrice: () => {
-    return get().items.reduce((total, item) => total + item.price * item.quantity, 0)
+    const { items, orderType } = get()
+    return items.reduce((total, item) => {
+      const price = orderType === 'offline' ? item.priceOffline : item.priceMerchant
+      return total + (price * item.quantity)
+    }, 0)
   },
 }))

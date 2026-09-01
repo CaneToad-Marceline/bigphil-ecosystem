@@ -1,0 +1,50 @@
+Konteks Sistem:
+Kita sedang mengembangkan aplikasi POS mobile-first untuk Bigphil Ostekake. Saat ini kita perlu menambahkan fitur "Tipe Pesanan" (Order Type) pada antarmuka kasir yang akan mengubah harga jual produk secara dinamis menjadi dua kategori: "Offline" (Harga Dasar) dan "Merchant" (Harga Online/Aplikasi).
+
+Tugas Utama:
+
+1. Update State Management: Modifikasi src/lib/store/useCartStore.ts (Zustand) untuk menambahkan state orderType dengan tipe data 'offline' | 'merchant', beserta fungsi setOrderType. Pastikan kalkulasi totalPrice di keranjang ikut beradaptasi jika kasir mengubah tipe pesanan di tengah transaksi.
+2. Tab Switcher Kasir: Buat komponen toggle atau tab switcher yang dominan di bagian atas src/app/(pos)/page.tsx agar kasir bisa dengan cepat berpindah antara mode "Offline" dan "Merchant".
+3. Data & Komponen Dinamis: Update ProductCard.tsx agar merender harga yang sesuai berdasarkan orderType yang aktif.
+
+Gunakan data varian dan harga JSON-ready berikut sebagai mock data awal di dalam antarmuka sebelum kita menghubungkannya secara penuh ke Supabase:
+
+DATA HARGA OFFLINE (Costing Dasar):
+
+* Ukuran Small:
+* Original: Rp29.000
+* Strawberry: Rp34.500
+* Oreo: Rp34.500
+* Lotus Biscoff: Rp39.000
+* Ferrero Rocher: Rp39.000
+* Blueberry: Rp34.500
+
+
+* Ukuran Large:
+* Original: Rp54.500
+* Strawberry: Rp59.000
+* Oreo: Rp59.000
+* Lotus Biscoff: Rp65.000
+* Ferrero Rocher: Rp65.000
+* Blueberry: Rp59.000
+
+
+
+DATA HARGA MERCHANT (Aplikasi Online):
+
+* Ukuran Small:
+* Original: Rp44.850
+* Strawberry: Rp44.850
+* Oreo: Rp44.850
+* Lotus Biscoff: Rp50.700
+* Ferrero Rocher: Rp50.700
+* Blueberry: Rp44.850
+
+
+* Ukuran Large:
+* Original: Rp76.700
+* Strawberry: Rp76.700
+* Oreo: Rp76.700
+* Lotus Biscoff: Rp84.500
+* Ferrero Rocher: Rp84.500
+* Blueberry: Rp76.700

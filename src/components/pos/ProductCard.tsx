@@ -1,6 +1,6 @@
 "use client"
 
-import { Product } from '@/lib/store/useCartStore'
+import { Product, useCartStore } from '@/lib/store/useCartStore'
 
 interface ProductCardProps {
   product: Product
@@ -8,6 +8,9 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product, onAdd }: ProductCardProps) {
+  const orderType = useCartStore((state) => state.orderType)
+  const currentPrice = orderType === 'offline' ? product.priceOffline : product.priceMerchant
+
   const formatRupiah = (number: number) => {
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
@@ -30,7 +33,7 @@ export default function ProductCard({ product, onAdd }: ProductCardProps) {
       </div>
       <div className="mt-auto">
         <h3 className="font-semibold text-slate-800 line-clamp-2">{product.name}</h3>
-        <p className="text-lg font-bold text-blue-600 mt-1">{formatRupiah(product.price)}</p>
+        <p className="text-lg font-bold text-blue-600 mt-1">{formatRupiah(currentPrice)}</p>
         <div className="mt-2 text-xs font-medium text-slate-500 bg-slate-100 w-fit px-2 py-1 rounded-full">
           Sisa: {product.stock}
         </div>
