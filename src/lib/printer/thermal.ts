@@ -1,4 +1,4 @@
-import { CartItem } from '../store/useCartStore'
+import { CartItem, OrderType } from '../store/useCartStore'
 
 // Helper untuk ESC/POS commands
 const ESC = "\x1B"
@@ -12,13 +12,10 @@ const PAPER_CUT = GS + "V\x41\x00" // Partial cut
 const LF = "\n"
 
 export async function connectPrinter(): Promise<BluetoothRemoteGATTCharacteristic> {
-  // Pastikan berjalan di client-side dan browser mendukung Web Bluetooth API
   if (typeof navigator === 'undefined' || !navigator.bluetooth) {
     throw new Error("Web Bluetooth API tidak didukung di perangkat/browser ini.")
   }
 
-  // UUID 000018f0... adalah UUID service umum untuk banyak printer thermal Bluetooth China
-  // Jika gagal, bisa dicoba ditambahkan UUID alternatif, contoh: 'e7810a71-73ae-499d-8c15-faa9aef0c3f2'
   const PRINTER_SERVICE_UUID = '000018f0-0000-1000-8000-00805f9b34fb'
   const PRINTER_CHARACTERISTIC_UUID = '00002af1-0000-1000-8000-00805f9b34fb'
 
@@ -38,11 +35,10 @@ export async function connectPrinter(): Promise<BluetoothRemoteGATTCharacteristi
   return characteristic
 }
 
-export async function printReceipt(cartItems: CartItem[], total: number) {
+export async function printReceipt(cartItems: CartItem[], total: number, orderType: OrderType) {
   try {
     const characteristic = await connectPrinter()
     
-    // Rakit string ESC/POS untuk receipt
     let receipt = ""
     receipt += INIT
     receipt += ALIGN_CENTER
@@ -53,15 +49,12 @@ export async function printReceipt(cartItems: CartItem[], total: number) {
     receipt += ALIGN_LEFT
     
     cartItems.forEach(item => {
-      // Baris nama barang
       receipt += item.name + LF
       
-      // Baris perhitungan (qty x harga = subtotal)
-      const lineStr = `  ${item.quantity} x ${item.price}`
-      const subtotalStr = (item.quantity * item.price).toString()
+      const currentPrice = orderType === 'offline' ? item.priceOffline : item.priceMerchant
+      const lineStr = `  ${item.quantity} x ${currentPrice}`
+      const subtotalStr = (item.quantity * currentPrice).toString()
       
-      // Kalkulasi spasi agar subtotal rata kanan
-      // Asumsi printer 58mm = max 32 karakter per baris
       const spacesLength = 32 - lineStr.length - subtotalStr.length
       const spaces = spacesLength > 0 ? " ".repeat(spacesLength) : " "
       
@@ -81,15 +74,12 @@ export async function printReceipt(cartItems: CartItem[], total: number) {
     receipt += "--------------------------------" + LF
     receipt += "Terima kasih atas" + LF
     receipt += "kunjungan Anda!" + LF
-    receipt += LF + LF + LF // Feed kertas
-    receipt += PAPER_CUT // Potong kertas
+    receipt += LF + LF + LF 
+    receipt += PAPER_CUT 
 
-    // Encode string menjadi Uint8Array
     const encoder = new TextEncoder()
     const data = encoder.encode(receipt)
 
-    // Tulis ke perangkat bluetooth
-    // Note: Untuk payload yang sangat besar (>512 bytes), mungkin perlu di-chunk
     await characteristic.writeValue(data)
 
   } catch (error) {

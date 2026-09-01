@@ -3,6 +3,8 @@
 import { useCartStore } from '@/lib/store/useCartStore'
 import { printReceipt } from '@/lib/printer/thermal'
 
+import { submitTransaction } from '@/lib/supabase/transactionActions'
+
 export default function CartDrawer() {
   const { items, updateQuantity, totalPrice, clearCart, orderType } = useCartStore()
 
@@ -17,9 +19,13 @@ export default function CartDrawer() {
   const handlePrint = async () => {
     if (items.length === 0) return
     try {
-      await printReceipt(items, totalPrice())
-      // Simulasi berhasil cetak & simpan
-      alert("Cetak struk berhasil!")
+      // 1. Simpan ke database Supabase
+      await submitTransaction(items, totalPrice(), 'cash', orderType)
+      
+      // 2. Cetak struk via Web Bluetooth
+      await printReceipt(items, totalPrice(), orderType)
+      
+      alert("Transaksi & cetak struk berhasil!")
       clearCart()
     } catch (error: any) {
       if (error.message.includes('globally disabled')) {
