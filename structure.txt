@@ -1,0 +1,15 @@
+bigphil-ecosystem/
+├── public/                 # Aset statis, ikon, dan manifest.json untuk PWA
+├── src/
+│   ├── app/
+│   │   ├── (pos)/          # Rute UI khusus untuk aplikasi POS (Mobile-first)
+│   │   ├── (dashboard)/    # Rute UI khusus untuk Admin Dashboard
+│   │   └── api/
+│   │       └── wa-webhook/ # Endpoint serverless untuk menerima pesan WA & memanggil Gemini
+│   ├── components/         # Komponen UI yang dapat digunakan ulang (Button, Modal, Card)
+│   └── lib/
+│       └── supabase/       # Klien Supabase dan fungsi helper database
+├── supabase/
+│   └── migrations/         # File SQL untuk skema database
+├── .env.local              # Variabel lingkungan (API Keys)
+└── package.json
