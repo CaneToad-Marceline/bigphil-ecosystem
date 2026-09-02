@@ -18,7 +18,7 @@ interface Transaction {
 export default function DashboardPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [filter, setFilter] = useState<TimeFilter>('daily')
-  const [metrics, setMetrics] = useState<SummaryMetrics>({ totalRevenue: 0, totalTransactions: 0 })
+  const [metrics, setMetrics] = useState<SummaryMetrics>({ totalRevenue: 0, totalTransactions: 0, netProfit: 0 })
   const [heroSKUs, setHeroSKUs] = useState<HeroSKU[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
@@ -134,13 +134,20 @@ export default function DashboardPage() {
       </div>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <StatCard 
           title="Total Pendapatan" 
           value={isLoading ? '...' : formatRupiah(metrics.totalRevenue)}
           subtitle={`Periode: ${filter === 'daily' ? 'Hari Ini' : filter === 'weekly' ? 'Minggu Ini' : 'Bulan Ini'}`}
           colorClass="bg-blue-50 border-blue-100"
           icon={<span className="text-xl">💰</span>}
+        />
+        <StatCard 
+          title="Pemasukan Bersih (Laba)" 
+          value={isLoading ? '...' : formatRupiah(metrics.netProfit)}
+          subtitle={`Periode: ${filter === 'daily' ? 'Hari Ini' : filter === 'weekly' ? 'Minggu Ini' : 'Bulan Ini'}`}
+          colorClass="bg-purple-50 border-purple-100"
+          icon={<span className="text-xl">📈</span>}
         />
         <StatCard 
           title="Jumlah Transaksi" 

@@ -4,7 +4,10 @@ CREATE TABLE products (
   name TEXT NOT NULL,
   description TEXT,
   price DECIMAL(10, 2) NOT NULL,
+  price_merchant DECIMAL(10, 2),
+  cost_price DECIMAL(10, 2) DEFAULT 0,
   stock INT DEFAULT 0,
+  is_active BOOLEAN DEFAULT true,
   image_url TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -27,6 +30,7 @@ CREATE TABLE transaction_items (
   product_id UUID REFERENCES products(id) ON DELETE SET NULL,
   quantity INT NOT NULL,
   unit_price DECIMAL(10, 2) NOT NULL,
+  cost_price_at_time DECIMAL(10, 2) DEFAULT 0,
   subtotal DECIMAL(10, 2) NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );

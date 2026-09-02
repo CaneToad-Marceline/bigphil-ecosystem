@@ -31,9 +31,9 @@ export default function DashboardLayout({
               </Link>
             </li>
             <li>
-              <a href="#" onClick={handleComingSoon} className="block px-4 py-3 rounded-lg hover:bg-slate-800 transition font-medium cursor-pointer">
+              <Link href="/dashboard/katalog" className="block px-4 py-3 rounded-lg hover:bg-slate-800 transition font-medium">
                 Katalog Produk
-              </a>
+              </Link>
             </li>
             <li>
               <Link href="/dashboard/chat" className="block px-4 py-3 rounded-lg hover:bg-slate-800 transition font-medium">

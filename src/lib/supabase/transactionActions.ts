@@ -32,6 +32,7 @@ export async function submitTransaction(
         transaction_id: transaction.id,
         quantity: item.quantity,
         unit_price: unitPrice,
+        cost_price_at_time: item.costPrice || 0,
         subtotal: unitPrice * item.quantity
       }
     })

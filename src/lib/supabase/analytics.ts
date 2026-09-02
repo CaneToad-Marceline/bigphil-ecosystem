@@ -9,6 +9,7 @@ export type TimeFilter = 'daily' | 'weekly' | 'monthly'
 export interface SummaryMetrics {
   totalRevenue: number
   totalTransactions: number
+  netProfit: number
 }
 
 export interface HeroSKU {
@@ -47,20 +48,41 @@ export const getSummaryMetrics = async (filter: TimeFilter): Promise<SummaryMetr
   const isoStartDate = formatISO(startDate) // Supabase menggunakan format ISO (UTC)
 
   const { data, error } = await supabase
-    .from('transactions')
-    .select('total_amount, status')
-    .gte('created_at', isoStartDate) // greater than or equal to startDate
-    .eq('status', 'completed')
+    .from('transaction_items')
+    .select(`
+      quantity,
+      unit_price,
+      cost_price_at_time,
+      transaction_id,
+      transactions!inner ( status, created_at )
+    `)
+    .gte('transactions.created_at', isoStartDate)
+    .eq('transactions.status', 'completed')
 
   if (error) {
     console.error('Error fetching summary metrics:', error)
-    return { totalRevenue: 0, totalTransactions: 0 }
+    return { totalRevenue: 0, totalTransactions: 0, netProfit: 0 }
   }
 
-  const totalRevenue = data.reduce((sum, tx) => sum + Number(tx.total_amount), 0)
-  const totalTransactions = data.length
+  let totalRevenue = 0
+  let netProfit = 0
+  const txIds = new Set<string>()
 
-  return { totalRevenue, totalTransactions }
+  data.forEach((item: any) => {
+    const qty = Number(item.quantity)
+    const price = Number(item.unit_price)
+    const cost = Number(item.cost_price_at_time || 0)
+    
+    totalRevenue += price * qty
+    netProfit += (price - cost) * qty
+    txIds.add(item.transaction_id)
+  })
+
+  return { 
+    totalRevenue, 
+    totalTransactions: txIds.size, 
+    netProfit 
+  }
 }
 
 /**

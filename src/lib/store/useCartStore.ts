@@ -5,6 +5,7 @@ export interface Product {
   name: string
   priceOffline: number
   priceMerchant: number
+  costPrice: number
   stock: number
   image_url?: string
 }
