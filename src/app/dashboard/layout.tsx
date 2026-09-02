@@ -36,9 +36,9 @@ export default function DashboardLayout({
               </a>
             </li>
             <li>
-              <a href="#" onClick={handleComingSoon} className="block px-4 py-3 rounded-lg hover:bg-slate-800 transition font-medium cursor-pointer">
+              <Link href="/dashboard/chat" className="block px-4 py-3 rounded-lg hover:bg-slate-800 transition font-medium">
                 Log AI Chat
-              </a>
+              </Link>
             </li>
           </ul>
         </nav>
