@@ -3,7 +3,9 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import StatCard from '@/components/dashboard/StatCard'
+import HeroSkuChart from '@/components/dashboard/HeroSkuChart'
 import { getSummaryMetrics, getHeroSKU, TimeFilter, SummaryMetrics, HeroSKU } from '@/lib/supabase/analytics'
+import { cancelTransaction } from '@/lib/supabase/transactionActions'
 
 interface Transaction {
   id: string
@@ -36,7 +38,7 @@ export default function DashboardPage() {
     setIsLoading(true)
     const [summary, heroes] = await Promise.all([
       getSummaryMetrics(filter),
-      getHeroSKU(filter, 5)
+      getHeroSKU(filter, 12) // Mengambil hingga 12 varian (6 rasa x 2 ukuran)
     ])
     setMetrics(summary)
     setHeroSKUs(heroes)
@@ -67,12 +69,37 @@ export default function DashboardPage() {
           }
         }
       )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'transactions' },
+        (payload) => {
+          console.log('Transaksi diupdate realtime:', payload)
+          // Update status transaksi di state tabel
+          setTransactions((prev) => 
+            prev.map(tx => tx.id === payload.new.id ? payload.new as Transaction : tx)
+          )
+          loadAnalytics()
+        }
+      )
       .subscribe()
 
     return () => {
       supabase.removeChannel(channel)
     }
   }, [filter]) // Tambahkan filter ke dependensi agar loadAnalytics menggunakan filter terbaru
+
+  const handleCancel = async (txId: string) => {
+    if (window.confirm('Apakah Anda yakin ingin membatalkan transaksi ini? Stok barang akan dikembalikan ke database.')) {
+      try {
+        await cancelTransaction(txId)
+        alert('Transaksi berhasil dibatalkan.')
+        // Pembaruan data tabel dan chart akan ditangani oleh event listener UPDATE Realtime di atas.
+      } catch (error) {
+        console.error(error)
+        alert('Terjadi kesalahan saat membatalkan transaksi. Silakan periksa koneksi atau log konsol.')
+      }
+    }
+  }
 
   const formatRupiah = (number: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -124,7 +151,21 @@ export default function DashboardPage() {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      {/* Grafik Hero SKU */}
+      <div>
+        <h3 className="text-xl font-bold text-slate-800 mb-4">📈 Grafik Hero SKU (Unit Terjual)</h3>
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+          {isLoading ? (
+            <div className="h-[400px] flex items-center justify-center text-slate-500">Memuat grafik...</div>
+          ) : heroSKUs.length === 0 ? (
+            <div className="h-[400px] flex items-center justify-center text-slate-500">Belum ada data penjualan pada periode ini.</div>
+          ) : (
+            <HeroSkuChart data={heroSKUs} />
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
         {/* Leaderboard Hero SKU */}
         <div>
           <h3 className="text-xl font-bold text-slate-800 mb-4">🏆 Leaderboard Produk (Hero SKU)</h3>
@@ -184,14 +225,15 @@ export default function DashboardPage() {
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 text-sm">
                     <th className="p-4 font-semibold whitespace-nowrap">WAKTU</th>
-                    <th className="p-4 font-semibold whitespace-nowrap">METODE</th>
+                    <th className="p-4 font-semibold whitespace-nowrap">STATUS</th>
                     <th className="p-4 font-semibold whitespace-nowrap text-right">TOTAL</th>
+                    <th className="p-4 font-semibold whitespace-nowrap text-center">AKSI</th>
                   </tr>
                 </thead>
                 <tbody>
                   {transactions.length === 0 ? (
                     <tr>
-                      <td colSpan={3} className="p-8 text-center text-slate-500">
+                      <td colSpan={4} className="p-8 text-center text-slate-500">
                         Belum ada transaksi.
                       </td>
                     </tr>
@@ -201,11 +243,25 @@ export default function DashboardPage() {
                         <td className="p-4 text-sm text-slate-600 whitespace-nowrap">
                           {formatWaktu(tx.created_at)}
                         </td>
-                        <td className="p-4 text-sm uppercase font-bold text-slate-700">
-                          {tx.payment_method}
+                        <td className="p-4">
+                          <span className={`px-2 py-1 rounded text-xs font-bold ${tx.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                            {tx.status}
+                          </span>
                         </td>
                         <td className="p-4 text-right font-bold text-slate-800">
                           {formatRupiah(tx.total_amount)}
+                        </td>
+                        <td className="p-4 text-center">
+                          {tx.status === 'completed' ? (
+                            <button 
+                              onClick={() => handleCancel(tx.id)}
+                              className="text-xs font-semibold text-white bg-red-500 hover:bg-red-600 px-3 py-1.5 rounded transition active:scale-95"
+                            >
+                              Batalkan
+                            </button>
+                          ) : (
+                            <span className="text-xs font-semibold text-slate-400">-</span>
+                          )}
                         </td>
                       </tr>
                     ))

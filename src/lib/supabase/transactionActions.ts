@@ -55,3 +55,53 @@ export async function submitTransaction(
     throw error
   }
 }
+
+export async function cancelTransaction(transactionId: string) {
+  try {
+    // 1. Update status transactions menjadi cancelled
+    const { error: txError } = await supabase
+      .from('transactions')
+      .update({ status: 'cancelled' })
+      .eq('id', transactionId)
+
+    if (txError) throw txError
+
+    // 2. Tarik data transaction_items untuk restorasi stok
+    const { data: items, error: fetchError } = await supabase
+      .from('transaction_items')
+      .select('product_id, quantity')
+      .eq('transaction_id', transactionId)
+
+    if (fetchError) throw fetchError
+
+    // 3. Looping update stok pada tabel products (fallback jika product_id tidak null)
+    if (items && items.length > 0) {
+      for (const item of items) {
+        if (item.product_id) {
+          // Ambil stok saat ini
+          const { data: product, error: pError } = await supabase
+            .from('products')
+            .select('stock')
+            .eq('id', item.product_id)
+            .single()
+
+          if (!pError && product) {
+            // Update dengan stok yang direstorasi
+            await supabase
+              .from('products')
+              .update({ stock: product.stock + item.quantity })
+              .eq('id', item.product_id)
+          }
+        }
+      }
+    }
+
+    return true
+  } catch (error: any) {
+    console.error("Error cancelling transaction DETAIL:", {
+      message: error?.message,
+      fullError: JSON.stringify(error)
+    })
+    throw error
+  }
+}
