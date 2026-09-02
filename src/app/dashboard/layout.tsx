@@ -1,3 +1,5 @@
+"use client"
+
 import Link from 'next/link'
 import React from 'react'
 
@@ -6,6 +8,11 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
+  const handleComingSoon = (e: React.MouseEvent) => {
+    e.preventDefault()
+    alert("Fitur ini akan dibangun di fase selanjutnya!")
+  }
+
   return (
     <div className="flex h-screen bg-slate-50">
       {/* Sticky Sidebar */}
@@ -24,14 +31,14 @@ export default function DashboardLayout({
               </Link>
             </li>
             <li>
-              <Link href="#" className="block px-4 py-3 rounded-lg hover:bg-slate-800 transition font-medium">
+              <a href="#" onClick={handleComingSoon} className="block px-4 py-3 rounded-lg hover:bg-slate-800 transition font-medium cursor-pointer">
                 Katalog Produk
-              </Link>
+              </a>
             </li>
             <li>
-              <Link href="#" className="block px-4 py-3 rounded-lg hover:bg-slate-800 transition font-medium">
+              <a href="#" onClick={handleComingSoon} className="block px-4 py-3 rounded-lg hover:bg-slate-800 transition font-medium cursor-pointer">
                 Log AI Chat
-              </Link>
+              </a>
             </li>
           </ul>
         </nav>

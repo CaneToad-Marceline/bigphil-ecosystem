@@ -44,8 +44,14 @@ export async function submitTransaction(
     if (itemsError) throw itemsError
 
     return transaction.id
-  } catch (error) {
-    console.error("Error submitting transaction:", error)
+  } catch (error: any) {
+    console.error("Error submitting transaction DETAIL:", {
+      message: error?.message,
+      details: error?.details,
+      hint: error?.hint,
+      code: error?.code,
+      fullError: JSON.stringify(error)
+    })
     throw error
   }
 }

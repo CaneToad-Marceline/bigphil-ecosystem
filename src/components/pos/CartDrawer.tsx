@@ -6,7 +6,7 @@ import { printReceipt } from '@/lib/printer/thermal'
 import { submitTransaction } from '@/lib/supabase/transactionActions'
 
 export default function CartDrawer() {
-  const { items, updateQuantity, totalPrice, clearCart, orderType } = useCartStore()
+  const { items, updateQuantity, totalPrice, clearCart, orderType, reduceStockAfterCheckout } = useCartStore()
 
   const formatRupiah = (number: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -25,6 +25,7 @@ export default function CartDrawer() {
       // 2. Cetak struk via Web Bluetooth
       await printReceipt(items, totalPrice(), orderType)
       
+      reduceStockAfterCheckout()
       alert("Transaksi & cetak struk berhasil!")
       clearCart()
     } catch (error: any) {

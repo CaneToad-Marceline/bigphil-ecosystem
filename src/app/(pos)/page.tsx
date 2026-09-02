@@ -24,12 +24,13 @@ const DUMMY_PRODUCTS: Product[] = [
 ]
 
 export default function POSPage() {
-  const [products, setProducts] = useState<Product[]>([])
-  const { addItem, items, orderType, setOrderType } = useCartStore()
+  const { addItem, items, orderType, setOrderType, products, setProducts } = useCartStore()
 
   useEffect(() => {
     // Simulasi delay fetch data
-    setProducts(DUMMY_PRODUCTS)
+    if (useCartStore.getState().products.length === 0) {
+      setProducts(DUMMY_PRODUCTS)
+    }
   }, [])
 
   return (
