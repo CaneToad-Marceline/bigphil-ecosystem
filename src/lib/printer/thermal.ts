@@ -38,31 +38,31 @@ export async function connectPrinter(): Promise<BluetoothRemoteGATTCharacteristi
 export async function printReceipt(cartItems: CartItem[], itemsTotal: number, orderType: OrderType, shippingFee: number = 0, addonFee: number = 0) {
   try {
     const characteristic = await connectPrinter()
-    
+
     let receipt = ""
     receipt += INIT
     receipt += ALIGN_CENTER
     receipt += BOLD_ON + "BIGPHIL OSTEKAKE" + BOLD_OFF + LF
-    receipt += "Jl. Contoh Alamat No.123" + LF
-    receipt += "Telp: 081234567890" + LF
+    receipt += "Nusa Loka Park BSD, Plaza Cordoba, Jl. Mekar Jaya Blok H08, Banten" + LF
+    receipt += "WA: 081524321194" + LF
     receipt += "--------------------------------" + LF
     receipt += ALIGN_LEFT
-    
+
     cartItems.forEach(item => {
       receipt += item.name + LF
-      
+
       const currentPrice = orderType === 'offline' ? item.priceOffline : item.priceMerchant
       const lineStr = `  ${item.quantity} x ${currentPrice}`
       const subtotalStr = (item.quantity * currentPrice).toString()
-      
+
       const spacesLength = 32 - lineStr.length - subtotalStr.length
       const spaces = spacesLength > 0 ? " ".repeat(spacesLength) : " "
-      
+
       receipt += lineStr + spaces + subtotalStr + LF
     })
-    
+
     receipt += "--------------------------------" + LF
-    
+
     if (shippingFee > 0) {
       const shipStr = "Ongkos Kirim"
       const shipAmt = shippingFee.toString()
@@ -83,20 +83,20 @@ export async function printReceipt(cartItems: CartItem[], itemsTotal: number, or
       receipt += "--------------------------------" + LF
     }
 
-    
+
     const totalStr = "TOTAL"
     const totalAmount = (itemsTotal + shippingFee + addonFee).toString()
     const totalSpacesLength = 32 - totalStr.length - totalAmount.length
     const totalSpaces = totalSpacesLength > 0 ? " ".repeat(totalSpacesLength) : " "
-    
+
     receipt += BOLD_ON + totalStr + totalSpaces + totalAmount + BOLD_OFF + LF
-    
+
     receipt += ALIGN_CENTER
     receipt += "--------------------------------" + LF
     receipt += "Terima kasih atas" + LF
     receipt += "kunjungan Anda!" + LF
-    receipt += LF + LF + LF 
-    receipt += PAPER_CUT 
+    receipt += LF + LF + LF
+    receipt += PAPER_CUT
 
     const encoder = new TextEncoder()
     const data = encoder.encode(receipt)
