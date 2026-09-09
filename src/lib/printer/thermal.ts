@@ -35,7 +35,7 @@ export async function connectPrinter(): Promise<BluetoothRemoteGATTCharacteristi
   return characteristic
 }
 
-export async function printReceipt(cartItems: CartItem[], total: number, orderType: OrderType) {
+export async function printReceipt(cartItems: CartItem[], itemsTotal: number, orderType: OrderType, shippingFee: number = 0, addonFee: number = 0) {
   try {
     const characteristic = await connectPrinter()
     
@@ -63,8 +63,29 @@ export async function printReceipt(cartItems: CartItem[], total: number, orderTy
     
     receipt += "--------------------------------" + LF
     
+    if (shippingFee > 0) {
+      const shipStr = "Ongkos Kirim"
+      const shipAmt = shippingFee.toString()
+      const spacesLength = 32 - shipStr.length - shipAmt.length
+      const spaces = spacesLength > 0 ? " ".repeat(spacesLength) : " "
+      receipt += shipStr + spaces + shipAmt + LF
+    }
+
+    if (addonFee > 0) {
+      const addonStr = "Add-on"
+      const addonAmt = addonFee.toString()
+      const spacesLength = 32 - addonStr.length - addonAmt.length
+      const spaces = spacesLength > 0 ? " ".repeat(spacesLength) : " "
+      receipt += addonStr + spaces + addonAmt + LF
+    }
+
+    if (shippingFee > 0 || addonFee > 0) {
+      receipt += "--------------------------------" + LF
+    }
+
+    
     const totalStr = "TOTAL"
-    const totalAmount = total.toString()
+    const totalAmount = (itemsTotal + shippingFee + addonFee).toString()
     const totalSpacesLength = 32 - totalStr.length - totalAmount.length
     const totalSpaces = totalSpacesLength > 0 ? " ".repeat(totalSpacesLength) : " "
     

@@ -37,6 +37,8 @@ CREATE TABLE transactions (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   cashier_id UUID REFERENCES auth.users(id), -- ID user dari Supabase Auth
   total_amount NUMERIC NOT NULL,
+  shipping_fee NUMERIC DEFAULT 0, -- Ongkos Kirim
+  addon_fee NUMERIC DEFAULT 0, -- Biaya tambahan lainnya (misal: packaging)
   payment_method TEXT NOT NULL, -- Contoh: 'cash', 'qris', 'transfer'
   order_type TEXT DEFAULT 'offline', -- Contoh: 'offline' atau 'merchant'
   status TEXT DEFAULT 'completed', -- 'completed' atau 'cancelled'

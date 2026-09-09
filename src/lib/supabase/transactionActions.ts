@@ -3,7 +3,9 @@ import { CartItem, OrderType } from '../store/useCartStore'
 
 export async function submitTransaction(
   cartItems: CartItem[], 
-  totalAmount: number, 
+  totalAmount: number, // Total akhir termasuk ongkir & addon
+  shippingFee: number = 0,
+  addonFee: number = 0,
   paymentMethod: string = 'cash',
   orderType: OrderType = 'offline'
 ) {
@@ -13,6 +15,8 @@ export async function submitTransaction(
       .from('transactions')
       .insert([{
         total_amount: totalAmount,
+        shipping_fee: shippingFee,
+        addon_fee: addonFee,
         payment_method: paymentMethod,
         order_type: orderType,
         status: 'completed'

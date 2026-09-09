@@ -4,9 +4,12 @@ import { useCartStore } from '@/lib/store/useCartStore'
 import { printReceipt } from '@/lib/printer/thermal'
 
 import { submitTransaction } from '@/lib/supabase/transactionActions'
+import { useState } from 'react'
+import CheckoutModal from './CheckoutModal'
 
 export default function CartDrawer() {
   const { items, updateQuantity, totalPrice, clearCart, orderType, reduceStockAfterCheckout } = useCartStore()
+  const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false)
 
   const formatRupiah = (number: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -16,14 +19,21 @@ export default function CartDrawer() {
     }).format(number)
   }
 
-  const handlePrint = async () => {
+  const handleOpenCheckout = () => {
     if (items.length === 0) return
+    setIsCheckoutModalOpen(true)
+  }
+
+  const handleConfirmCheckout = async (shippingFee: number, addonFee: number, paymentMethod: string) => {
+    setIsCheckoutModalOpen(false)
     try {
+      const totalAmount = totalPrice() + shippingFee + addonFee
+      
       // 1. Simpan ke database Supabase
-      await submitTransaction(items, totalPrice(), 'cash', orderType)
+      await submitTransaction(items, totalAmount, shippingFee, addonFee, paymentMethod, orderType)
       
       // 2. Cetak struk via Web Bluetooth
-      await printReceipt(items, totalPrice(), orderType)
+      await printReceipt(items, totalPrice(), orderType, shippingFee, addonFee)
       
       reduceStockAfterCheckout()
       alert("Transaksi & cetak struk berhasil!")
@@ -96,13 +106,20 @@ export default function CartDrawer() {
           <span className="text-2xl font-bold text-slate-800">{formatRupiah(totalPrice())}</span>
         </div>
         <button 
-          onClick={handlePrint}
+          onClick={handleOpenCheckout}
           disabled={items.length === 0}
           className="w-full bg-blue-600 text-white font-bold py-4 rounded-xl active:scale-[0.98] transition-transform disabled:opacity-50 disabled:active:scale-100"
         >
           Proses Pembayaran & Cetak
         </button>
       </div>
+
+      <CheckoutModal 
+        isOpen={isCheckoutModalOpen}
+        onClose={() => setIsCheckoutModalOpen(false)}
+        itemsTotal={totalPrice()}
+        onConfirm={handleConfirmCheckout}
+      />
     </div>
   )
 }
