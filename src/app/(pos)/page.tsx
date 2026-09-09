@@ -18,38 +18,37 @@ export default function POSPage() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [productsData, promosData] = await Promise.all([
-          getProducts(),
-          getPromotions()
-        ])
-
-        if (productsData) {
-          const mappedProducts: Product[] = productsData
-            .filter(p => p.is_active)
-            .map(p => ({
-              id: p.id,
-              name: p.name + (p.description ? ` (${p.description})` : ''),
-              priceOffline: p.price,
-              priceMerchant: p.price_merchant || p.price,
-              costPrice: p.cost_price || 0,
-              stock_quantity: p.stock_quantity,
-              image_url: p.image_url
-            }))
-          setProducts(mappedProducts)
-        }
-
+        // Selalu ambil promo terbaru
+        const promosData = await getPromotions()
         if (promosData) {
           setPromos(promosData.filter(p => p.is_active))
+        }
+
+        // Ambil produk hanya jika belum ada di store
+        if (useCartStore.getState().products.length === 0) {
+          const productsData = await getProducts()
+          if (productsData) {
+            const mappedProducts: Product[] = productsData
+              .filter(p => p.is_active)
+              .map(p => ({
+                id: p.id,
+                name: p.name + (p.description ? ` (${p.description})` : ''),
+                priceOffline: p.price,
+                priceMerchant: p.price_merchant || p.price,
+                costPrice: p.cost_price || 0,
+                stock_quantity: p.stock_quantity,
+                image_url: p.image_url
+              }))
+            setProducts(mappedProducts)
+          }
         }
       } catch (error) {
         console.error("Gagal memuat data:", error)
       }
     }
 
-    if (useCartStore.getState().products.length === 0) {
-      loadData()
-    }
-  }, [])
+    loadData()
+  }, [setProducts])
 
   const handlePromoConfirm = (selectedProducts: SelectedPromoProduct[]) => {
     if (!selectedPromo) return
