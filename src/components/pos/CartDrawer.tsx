@@ -53,21 +53,32 @@ export default function CartDrawer() {
           items.map((item) => {
             const currentPrice = orderType === 'offline' ? item.priceOffline : item.priceMerchant;
             return (
-              <div key={item.id} className="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-100">
+              <div key={item.cartItemId} className="flex justify-between items-start bg-slate-50 p-3 rounded-lg border border-slate-100">
                 <div className="flex-1 pr-2">
                   <h4 className="font-medium text-slate-800">{item.name}</h4>
                   <p className="text-sm text-blue-600 font-semibold">{formatRupiah(currentPrice)}</p>
+                  
+                  {item.isPromo && item.selectedProducts && (
+                    <div className="mt-2 space-y-1">
+                      {item.selectedProducts.map(sp => (
+                        <div key={sp.id} className="text-xs text-slate-500 flex items-center gap-1">
+                          <span className="w-1 h-1 bg-slate-400 rounded-full"></span>
+                          {sp.quantity}x {sp.name}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 mt-1">
                   <button 
-                    onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                    onClick={() => updateQuantity(item.cartItemId, item.quantity - 1)}
                     className="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 rounded-md text-slate-600 active:bg-slate-100 font-bold"
                   >
                     -
                   </button>
                   <span className="font-semibold w-4 text-center">{item.quantity}</span>
                   <button 
-                    onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                    onClick={() => updateQuantity(item.cartItemId, item.quantity + 1)}
                     className="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 rounded-md text-slate-600 active:bg-slate-100 font-bold"
                   >
                     +

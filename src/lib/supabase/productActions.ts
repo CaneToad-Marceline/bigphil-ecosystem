@@ -6,7 +6,7 @@ export interface ProductInput {
   price: number
   price_merchant?: number
   cost_price: number
-  stock: number
+  stock_quantity: number
   is_active?: boolean
 }
 
@@ -32,7 +32,7 @@ export async function addProduct(product: ProductInput) {
       price: product.price,
       price_merchant: product.price_merchant,
       cost_price: product.cost_price,
-      stock: product.stock,
+      stock_quantity: product.stock_quantity,
       is_active: product.is_active ?? true
     }])
     .select()

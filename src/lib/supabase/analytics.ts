@@ -1,10 +1,10 @@
 import { supabase } from './client'
-import { startOfDay, startOfWeek, startOfMonth, formatISO } from 'date-fns'
+import { startOfDay, startOfWeek, startOfMonth, endOfDay, formatISO } from 'date-fns'
 import { toZonedTime } from 'date-fns-tz'
 
 const TIMEZONE = 'Asia/Jakarta' // WIB
 
-export type TimeFilter = 'daily' | 'weekly' | 'monthly'
+export type TimeFilter = 'daily' | 'weekly' | 'monthly' | 'custom'
 
 export interface SummaryMetrics {
   totalRevenue: number
@@ -43,21 +43,28 @@ const getStartDateByFilter = (filter: TimeFilter): Date => {
 /**
  * Menghitung Total Pendapatan dan Jumlah Transaksi
  */
-export const getSummaryMetrics = async (filter: TimeFilter): Promise<SummaryMetrics> => {
-  const startDate = getStartDateByFilter(filter)
-  const isoStartDate = formatISO(startDate) // Supabase menggunakan format ISO (UTC)
-
-  const { data, error } = await supabase
+export const getSummaryMetrics = async (filter: TimeFilter, customRange?: { start: Date, end: Date }): Promise<SummaryMetrics> => {
+  let query = supabase
     .from('transaction_items')
     .select(`
       quantity,
-      unit_price,
-      cost_price_at_time,
+      price_at_time,
       transaction_id,
+      products ( cost_price ),
       transactions!inner ( status, created_at )
     `)
-    .gte('transactions.created_at', isoStartDate)
     .eq('transactions.status', 'completed')
+
+  if (filter === 'custom' && customRange) {
+    query = query
+      .gte('transactions.created_at', formatISO(startOfDay(customRange.start)))
+      .lte('transactions.created_at', formatISO(endOfDay(customRange.end)))
+  } else if (filter !== 'custom') {
+    const startDate = getStartDateByFilter(filter)
+    query = query.gte('transactions.created_at', formatISO(startDate))
+  }
+
+  const { data, error } = await query
 
   if (error) {
     console.error('Error fetching summary metrics:', error)
@@ -70,8 +77,9 @@ export const getSummaryMetrics = async (filter: TimeFilter): Promise<SummaryMetr
 
   data.forEach((item: any) => {
     const qty = Number(item.quantity)
-    const price = Number(item.unit_price)
-    const cost = Number(item.cost_price_at_time || 0)
+    const price = Number(item.price_at_time)
+    // Ambil cost_price secara dinamis dari tabel products
+    const cost = item.products ? Number(item.products.cost_price || 0) : 0
     
     totalRevenue += price * qty
     netProfit += (price - cost) * qty
@@ -102,21 +110,27 @@ const extractSize = (name: string): string => {
 /**
  * Mengambil data Hero SKU (Leaderboard Produk Terlaris)
  */
-export const getHeroSKU = async (filter: TimeFilter, limit: number = 10): Promise<HeroSKU[]> => {
-  const startDate = getStartDateByFilter(filter)
-  const isoStartDate = formatISO(startDate)
-
-  // Join table transaction_items dengan products dan transactions
-  const { data, error } = await supabase
+export const getHeroSKU = async (filter: TimeFilter, limit: number = 10, customRange?: { start: Date, end: Date }): Promise<HeroSKU[]> => {
+  let query = supabase
     .from('transaction_items')
     .select(`
       quantity,
-      subtotal,
+      price_at_time,
       products ( id, name ),
       transactions!inner ( status, created_at )
     `)
-    .gte('transactions.created_at', isoStartDate)
     .eq('transactions.status', 'completed')
+
+  if (filter === 'custom' && customRange) {
+    query = query
+      .gte('transactions.created_at', formatISO(startOfDay(customRange.start)))
+      .lte('transactions.created_at', formatISO(endOfDay(customRange.end)))
+  } else if (filter !== 'custom') {
+    const startDate = getStartDateByFilter(filter)
+    query = query.gte('transactions.created_at', formatISO(startDate))
+  }
+
+  const { data, error } = await query
 
   if (error) {
     console.error('Error fetching hero SKU:', error)
@@ -132,7 +146,7 @@ export const getHeroSKU = async (filter: TimeFilter, limit: number = 10): Promis
 
     const productId = product.id
     const quantity = Number(item.quantity)
-    const subtotal = Number(item.subtotal)
+    const subtotal = Number(item.price_at_time) * quantity
     
     if (!skuMap[productId]) {
       skuMap[productId] = {

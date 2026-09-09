@@ -18,6 +18,7 @@ interface Transaction {
 export default function DashboardPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [filter, setFilter] = useState<TimeFilter>('daily')
+  const [customDate, setCustomDate] = useState({ start: '', end: '' })
   const [metrics, setMetrics] = useState<SummaryMetrics>({ totalRevenue: 0, totalTransactions: 0, netProfit: 0 })
   const [heroSKUs, setHeroSKUs] = useState<HeroSKU[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -35,10 +36,19 @@ export default function DashboardPage() {
   }
 
   const loadAnalytics = async () => {
+    if (filter === 'custom' && (!customDate.start || !customDate.end)) {
+      return // Jangan load jika custom date belum dipilih keduanya
+    }
+    
     setIsLoading(true)
+    let range = undefined
+    if (filter === 'custom') {
+      range = { start: new Date(customDate.start), end: new Date(customDate.end) }
+    }
+
     const [summary, heroes] = await Promise.all([
-      getSummaryMetrics(filter),
-      getHeroSKU(filter, 12) // Mengambil hingga 12 varian (6 rasa x 2 ukuran)
+      getSummaryMetrics(filter, range),
+      getHeroSKU(filter, 12, range) // Mengambil hingga 12 varian (6 rasa x 2 ukuran)
     ])
     setMetrics(summary)
     setHeroSKUs(heroes)
@@ -51,7 +61,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     loadAnalytics()
-  }, [filter])
+  }, [filter, customDate.start, customDate.end])
 
   useEffect(() => {
     // Berlangganan ke perubahan realtime di tabel transactions
@@ -86,7 +96,7 @@ export default function DashboardPage() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [filter]) // Tambahkan filter ke dependensi agar loadAnalytics menggunakan filter terbaru
+  }, [filter, customDate.start, customDate.end])
 
   const handleCancel = async (txId: string) => {
     if (window.confirm('Apakah Anda yakin ingin membatalkan transaksi ini? Stok barang akan dikembalikan ke database.')) {
@@ -122,15 +132,35 @@ export default function DashboardPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <h2 className="text-3xl font-bold text-slate-800">Ringkasan Penjualan</h2>
         
-        <select 
-          value={filter}
-          onChange={(e) => setFilter(e.target.value as TimeFilter)}
-          className="bg-white border border-slate-300 text-slate-800 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 font-medium shadow-sm cursor-pointer"
-        >
-          <option value="daily">Hari Ini</option>
-          <option value="weekly">Minggu Ini</option>
-          <option value="monthly">Bulan Ini</option>
-        </select>
+        <div className="flex flex-wrap items-center gap-3">
+          {filter === 'custom' && (
+            <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-4 duration-300">
+              <input 
+                type="date" 
+                value={customDate.start} 
+                onChange={e => setCustomDate({...customDate, start: e.target.value})}
+                className="bg-white border border-slate-300 text-slate-800 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2 font-medium shadow-sm"
+              />
+              <span className="text-slate-500 font-medium">s/d</span>
+              <input 
+                type="date" 
+                value={customDate.end} 
+                onChange={e => setCustomDate({...customDate, end: e.target.value})}
+                className="bg-white border border-slate-300 text-slate-800 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2 font-medium shadow-sm"
+              />
+            </div>
+          )}
+          <select 
+            value={filter}
+            onChange={(e) => setFilter(e.target.value as TimeFilter)}
+            className="bg-white border border-slate-300 text-slate-800 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 font-medium shadow-sm cursor-pointer"
+          >
+            <option value="daily">Hari Ini</option>
+            <option value="weekly">Minggu Ini</option>
+            <option value="monthly">Bulan Ini</option>
+            <option value="custom">Kustom</option>
+          </select>
+        </div>
       </div>
 
       {/* Stat Cards */}
@@ -138,21 +168,21 @@ export default function DashboardPage() {
         <StatCard 
           title="Total Pendapatan" 
           value={isLoading ? '...' : formatRupiah(metrics.totalRevenue)}
-          subtitle={`Periode: ${filter === 'daily' ? 'Hari Ini' : filter === 'weekly' ? 'Minggu Ini' : 'Bulan Ini'}`}
+          subtitle={`Periode: ${filter === 'daily' ? 'Hari Ini' : filter === 'weekly' ? 'Minggu Ini' : filter === 'monthly' ? 'Bulan Ini' : `${customDate.start || '?'} s/d ${customDate.end || '?'}`}`}
           colorClass="bg-blue-50 border-blue-100"
           icon={<span className="text-xl">💰</span>}
         />
         <StatCard 
           title="Pemasukan Bersih (Laba)" 
           value={isLoading ? '...' : formatRupiah(metrics.netProfit)}
-          subtitle={`Periode: ${filter === 'daily' ? 'Hari Ini' : filter === 'weekly' ? 'Minggu Ini' : 'Bulan Ini'}`}
+          subtitle={`Periode: ${filter === 'daily' ? 'Hari Ini' : filter === 'weekly' ? 'Minggu Ini' : filter === 'monthly' ? 'Bulan Ini' : `${customDate.start || '?'} s/d ${customDate.end || '?'}`}`}
           colorClass="bg-purple-50 border-purple-100"
           icon={<span className="text-xl">📈</span>}
         />
         <StatCard 
           title="Jumlah Transaksi" 
           value={isLoading ? '...' : metrics.totalTransactions}
-          subtitle={`Periode: ${filter === 'daily' ? 'Hari Ini' : filter === 'weekly' ? 'Minggu Ini' : 'Bulan Ini'}`}
+          subtitle={`Periode: ${filter === 'daily' ? 'Hari Ini' : filter === 'weekly' ? 'Minggu Ini' : filter === 'monthly' ? 'Bulan Ini' : `${customDate.start || '?'} s/d ${customDate.end || '?'}`}`}
           colorClass="bg-emerald-50 border-emerald-100"
           icon={<span className="text-xl">🧾</span>}
         />

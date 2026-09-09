@@ -35,7 +35,7 @@ export default function ProductCard({ product, onAdd }: ProductCardProps) {
         <h3 className="font-semibold text-slate-800 line-clamp-2">{product.name}</h3>
         <p className="text-lg font-bold text-blue-600 mt-1">{formatRupiah(currentPrice)}</p>
         <div className="mt-2 text-xs font-medium text-slate-500 bg-slate-100 w-fit px-2 py-1 rounded-full">
-          Sisa: {product.stock}
+          Sisa: {product.stock_quantity}
         </div>
       </div>
     </div>

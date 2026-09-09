@@ -14,6 +14,7 @@ export async function submitTransaction(
       .insert([{
         total_amount: totalAmount,
         payment_method: paymentMethod,
+        order_type: orderType,
         status: 'completed'
       }])
       .select('id')
@@ -23,17 +24,40 @@ export async function submitTransaction(
     if (!transaction) throw new Error("Gagal membuat transaksi baru")
 
     // 2. Siapkan data untuk transaction_items
-    const itemsData = cartItems.map((item) => {
+    const itemsData: any[] = []
+    
+    cartItems.forEach((item) => {
       const unitPrice = orderType === 'offline' ? item.priceOffline : item.priceMerchant;
       
-      // Catatan: Karena mock data kita menggunakan ID seperti 's1' (bukan UUID),
-      // kita biarkan product_id null sementara sampai tabel products di-fetch asli.
-      return {
-        transaction_id: transaction.id,
-        quantity: item.quantity,
-        unit_price: unitPrice,
-        cost_price_at_time: item.costPrice || 0,
-        subtotal: unitPrice * item.quantity
+      if (item.isPromo && item.selectedProducts) {
+        // Insert baris header promo (product_id = null, promo_id terisi)
+        itemsData.push({
+          transaction_id: transaction.id,
+          product_id: null,
+          promo_id: item.id,
+          quantity: item.quantity,
+          price_at_time: unitPrice
+        })
+        
+        // Insert baris sub-item produk di dalam promo (harga 0 karena sudah dibayar di header promo)
+        item.selectedProducts.forEach(sp => {
+          itemsData.push({
+            transaction_id: transaction.id,
+            product_id: sp.id,
+            promo_id: item.id,
+            quantity: sp.quantity * item.quantity, // jumlah produk per promo * jumlah paket promo
+            price_at_time: 0
+          })
+        })
+      } else {
+        // Insert produk reguler
+        itemsData.push({
+          transaction_id: transaction.id,
+          product_id: item.id,
+          promo_id: null,
+          quantity: item.quantity,
+          price_at_time: unitPrice
+        })
       }
     })
 
@@ -59,10 +83,22 @@ export async function submitTransaction(
 
 export async function cancelTransaction(transactionId: string) {
   try {
-    // 1. Update status transactions menjadi cancelled
+    // 0. Pastikan transaksi belum dibatalkan (untuk mencegah double cancel)
+    const { data: currentTx, error: checkError } = await supabase
+      .from('transactions')
+      .select('status')
+      .eq('id', transactionId)
+      .single()
+
+    if (checkError) throw checkError
+    if (currentTx.status === 'cancelled') {
+      throw new Error("Transaksi sudah pernah dibatalkan sebelumnya.")
+    }
+
+    // 1. Update status transactions menjadi cancelled dan set total = 0
     const { error: txError } = await supabase
       .from('transactions')
-      .update({ status: 'cancelled' })
+      .update({ status: 'cancelled', total_amount: 0 })
       .eq('id', transactionId)
 
     if (txError) throw txError
@@ -82,7 +118,7 @@ export async function cancelTransaction(transactionId: string) {
           // Ambil stok saat ini
           const { data: product, error: pError } = await supabase
             .from('products')
-            .select('stock')
+            .select('stock_quantity')
             .eq('id', item.product_id)
             .single()
 
@@ -90,7 +126,7 @@ export async function cancelTransaction(transactionId: string) {
             // Update dengan stok yang direstorasi
             await supabase
               .from('products')
-              .update({ stock: product.stock + item.quantity })
+              .update({ stock_quantity: product.stock_quantity + item.quantity })
               .eq('id', item.product_id)
           }
         }

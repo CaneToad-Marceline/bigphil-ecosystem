@@ -1,41 +1,59 @@
--- 1. Tabel Products
+-- Aktifkan ekstensi UUID (jika belum aktif)
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- Hapus tabel lama jika ingin reset bersih (Hati-hati: ini akan menghapus data yang ada!)
+DROP TABLE IF EXISTS transaction_items;
+DROP TABLE IF EXISTS transactions;
+DROP TABLE IF EXISTS promotions;
+DROP TABLE IF EXISTS products;
+
+-- 1. Tabel Produk (Katalog, Stok, dan Modal)
 CREATE TABLE products (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   name TEXT NOT NULL,
-  description TEXT,
-  price DECIMAL(10, 2) NOT NULL,
-  price_merchant DECIMAL(10, 2),
-  cost_price DECIMAL(10, 2) DEFAULT 0,
-  stock INT DEFAULT 0,
-  is_active BOOLEAN DEFAULT true,
-  image_url TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  description TEXT, -- Digunakan untuk Ukuran (Small/Large)
+  price NUMERIC NOT NULL, -- Harga Jual Dasar (Offline)
+  price_merchant NUMERIC, -- Harga Jual Merchant/Ojol
+  cost_price NUMERIC DEFAULT 0, -- Modal Dasar Flat (Untuk Kalkulasi Laba Bersih)
+  stock_quantity INT DEFAULT 0,
+  is_active BOOLEAN DEFAULT TRUE, -- Untuk menyembunyikan/menampilkan produk
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 2. Tabel Transactions
+-- 2. Tabel Promosi (Paket Diskon)
+CREATE TABLE promotions (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  name TEXT NOT NULL,
+  price_offline NUMERIC NOT NULL, -- Harga promo untuk kasir offline
+  price_merchant NUMERIC NOT NULL, -- Harga promo untuk ojol/online
+  required_quantity INT DEFAULT 2, -- Berapa item produk yang harus dipilih
+  eligible_product_ids JSONB DEFAULT '[]'::jsonb, -- Array of UUID produk yang valid dipilih
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 3. Tabel Transaksi (Header Nota)
 CREATE TABLE transactions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  total_amount DECIMAL(10, 2) NOT NULL,
-  payment_method TEXT,
-  status TEXT DEFAULT 'pending', -- pending, completed, cancelled
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  cashier_id UUID REFERENCES auth.users(id), -- ID user dari Supabase Auth
+  total_amount NUMERIC NOT NULL,
+  payment_method TEXT NOT NULL, -- Contoh: 'cash', 'qris', 'transfer'
+  order_type TEXT DEFAULT 'offline', -- Contoh: 'offline' atau 'merchant'
+  status TEXT DEFAULT 'completed', -- 'completed' atau 'cancelled'
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 3. Tabel Transaction Items
+-- 4. Tabel Detail Transaksi (Item di dalam keranjang belanja)
 CREATE TABLE transaction_items (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  transaction_id UUID NOT NULL REFERENCES transactions(id) ON DELETE CASCADE,
-  product_id UUID REFERENCES products(id) ON DELETE SET NULL,
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  transaction_id UUID REFERENCES transactions(id) ON DELETE CASCADE,
+  product_id UUID REFERENCES products(id), -- Bisa NULL jika ini baris header promo
+  promo_id UUID REFERENCES promotions(id), -- NULL jika produk biasa, terisi jika ini terkait promo
   quantity INT NOT NULL,
-  unit_price DECIMAL(10, 2) NOT NULL,
-  cost_price_at_time DECIMAL(10, 2) DEFAULT 0,
-  subtotal DECIMAL(10, 2) NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  price_at_time NUMERIC NOT NULL -- Merekam harga final saat transaksi (Offline vs Merchant vs Promo)
 );
 
--- 4. Tabel Chat Logs (Untuk WA Webhook AI)
+-- 5. Tabel Chat Logs (Untuk WA Webhook AI)
 CREATE TABLE chat_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   phone_number TEXT NOT NULL,

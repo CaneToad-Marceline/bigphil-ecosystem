@@ -1,6 +1,7 @@
 "use client"
 
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import React from 'react'
 
 export default function DashboardLayout({
@@ -8,6 +9,8 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
+  const pathname = usePathname()
+
   const handleComingSoon = (e: React.MouseEvent) => {
     e.preventDefault()
     alert("Fitur ini akan dibangun di fase selanjutnya!")
@@ -26,18 +29,23 @@ export default function DashboardLayout({
         <nav className="flex-1 py-6 overflow-y-auto">
           <ul className="space-y-2 px-4">
             <li>
-              <Link href="/dashboard" className="block px-4 py-3 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition">
+              <Link href="/dashboard" className={`block px-4 py-3 rounded-lg font-medium transition ${pathname === '/dashboard' ? 'bg-blue-600 text-white' : 'hover:bg-slate-800 text-slate-300'}`}>
                 Ringkasan Penjualan
               </Link>
             </li>
             <li>
-              <Link href="/dashboard/katalog" className="block px-4 py-3 rounded-lg hover:bg-slate-800 transition font-medium">
+              <Link href="/dashboard/katalog" className={`block px-4 py-3 rounded-lg font-medium transition ${pathname === '/dashboard/katalog' ? 'bg-blue-600 text-white' : 'hover:bg-slate-800 text-slate-300'}`}>
                 Katalog Produk
               </Link>
             </li>
             <li>
-              <Link href="/dashboard/chat" className="block px-4 py-3 rounded-lg hover:bg-slate-800 transition font-medium">
+              <Link href="/dashboard/chat" className={`block px-4 py-3 rounded-lg font-medium transition ${pathname === '/dashboard/chat' ? 'bg-blue-600 text-white' : 'hover:bg-slate-800 text-slate-300'}`}>
                 Log AI Chat
+              </Link>
+            </li>
+            <li>
+              <Link href="/dashboard/promo" className={`block px-4 py-3 rounded-lg font-medium transition ${pathname === '/dashboard/promo' ? 'bg-blue-600 text-white' : 'hover:bg-slate-800 text-slate-300'}`}>
+                Manajemen Promo
               </Link>
             </li>
           </ul>

@@ -15,7 +15,7 @@ export default function KatalogPage() {
     price: 0,
     price_merchant: 0,
     cost_price: 0,
-    stock: 0,
+    stock_quantity: 0,
     is_active: true
   })
 
@@ -43,7 +43,7 @@ export default function KatalogPage() {
         price: product.price,
         price_merchant: product.price_merchant || 0,
         cost_price: product.cost_price || 0,
-        stock: product.stock,
+        stock_quantity: product.stock_quantity,
         is_active: product.is_active
       })
     } else {
@@ -54,7 +54,7 @@ export default function KatalogPage() {
         price: 0,
         price_merchant: 0,
         cost_price: 0,
-        stock: 0,
+        stock_quantity: 0,
         is_active: true
       })
     }
@@ -154,8 +154,8 @@ export default function KatalogPage() {
                     <td className="p-4 text-right font-medium text-slate-700">{formatRupiah(p.price_merchant)}</td>
                     <td className="p-4 text-right font-medium text-rose-600">{formatRupiah(p.cost_price)}</td>
                     <td className="p-4 text-center">
-                      <span className={`font-bold px-2 py-1 rounded text-sm ${p.stock > 10 ? 'bg-green-100 text-green-700' : p.stock > 0 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
-                        {p.stock}
+                      <span className={`font-bold px-2 py-1 rounded text-sm ${p.stock_quantity > 10 ? 'bg-green-100 text-green-700' : p.stock_quantity > 0 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
+                        {p.stock_quantity}
                       </span>
                     </td>
                     <td className="p-4 text-center">
@@ -217,7 +217,7 @@ export default function KatalogPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-1">Stok Awal</label>
-                  <input required type="number" name="stock" value={formData.stock} onChange={handleChange} min="0" className="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" />
+                  <input required type="number" name="stock_quantity" value={formData.stock_quantity} onChange={handleChange} min="0" className="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" />
                 </div>
               </div>
               
