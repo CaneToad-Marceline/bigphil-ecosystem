@@ -11,15 +11,16 @@ const BOLD_OFF = ESC + "E\x00"
 const PAPER_CUT = GS + "V\x41\x00" // Partial cut
 const LF = "\n"
 
-export async function connectPrinter(): Promise<BluetoothRemoteGATTCharacteristic> {
-  if (typeof navigator === 'undefined' || !navigator.bluetooth) {
+export async function connectPrinter(): Promise<any> {
+  const nav = navigator as any;
+  if (typeof nav === 'undefined' || !nav.bluetooth) {
     throw new Error("Web Bluetooth API tidak didukung di perangkat/browser ini.")
   }
 
   const PRINTER_SERVICE_UUID = '000018f0-0000-1000-8000-00805f9b34fb'
   const PRINTER_CHARACTERISTIC_UUID = '00002af1-0000-1000-8000-00805f9b34fb'
 
-  const device = await navigator.bluetooth.requestDevice({
+  const device = await nav.bluetooth.requestDevice({
     filters: [{ services: [PRINTER_SERVICE_UUID] }],
     optionalServices: [PRINTER_SERVICE_UUID]
   })

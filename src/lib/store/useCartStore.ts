@@ -32,6 +32,7 @@ interface CartStore {
   products: Product[]
   setProducts: (products: Product[]) => void
   setOrderType: (type: OrderType) => void
+  addItem: (product: Product) => void
   addPromo: (promoItem: Omit<CartItem, 'cartItemId'>) => void
   removeItem: (cartItemId: string) => void
   updateQuantity: (cartItemId: string, quantity: number) => void
@@ -46,7 +47,7 @@ export const useCartStore = create<CartStore>((set, get) => ({
   products: [],
   setProducts: (products) => set({ products }),
   setOrderType: (type) => set({ orderType: type }),
-  addItem: (product) => {
+  addItem: (product: Product) => {
     set((state) => {
       // Untuk produk biasa, kita bisa merge berdasarkan id
       const existingItemIndex = state.items.findIndex((item) => item.id === product.id && !item.isPromo)
