@@ -1,8 +1,9 @@
 "use client"
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import React from 'react'
+import { supabase } from '@/lib/supabase/client'
 
 export default function DashboardLayout({
   children,
@@ -10,6 +11,13 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
+  const router = useRouter()
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut()
+    router.push('/login')
+    router.refresh()
+  }
 
   const handleComingSoon = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -51,10 +59,13 @@ export default function DashboardLayout({
           </ul>
         </nav>
         
-        <div className="p-6 border-t border-slate-800">
+        <div className="p-6 border-t border-slate-800 space-y-3">
           <Link href="/" className="block w-full text-center px-4 py-3 border border-slate-700 rounded-lg hover:bg-slate-800 hover:text-white transition font-medium">
             Kembali ke Kasir
           </Link>
+          <button onClick={handleSignOut} className="w-full text-center px-4 py-3 border border-red-900/50 text-red-400 rounded-lg hover:bg-red-900/30 hover:text-red-300 transition font-medium">
+            Keluar (Sign Out)
+          </button>
         </div>
       </aside>
 

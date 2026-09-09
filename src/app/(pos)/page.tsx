@@ -8,8 +8,11 @@ import { getProducts } from '@/lib/supabase/productActions'
 import { getPromotions, Promotion } from '@/lib/supabase/promoActions'
 import PromoSelectorModal from '@/components/pos/PromoSelectorModal'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabase/client'
 
 export default function POSPage() {
+  const router = useRouter()
   const { addItem, addPromo, items, orderType, setOrderType, products, setProducts } = useCartStore()
   const [menuOpen, setMenuOpen] = useState(false)
   const [promos, setPromos] = useState<Promotion[]>([])
@@ -68,6 +71,12 @@ export default function POSPage() {
     setSelectedPromo(null)
   }
 
+  const handleSignOut = async () => {
+    await supabase.auth.signOut()
+    router.push('/login')
+    router.refresh()
+  }
+
   const formatRupiah = (num: number) => {
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
@@ -110,6 +119,9 @@ export default function POSPage() {
                     <Link href="/dashboard/katalog" className="block px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition">
                       Katalog Produk
                     </Link>
+                    <button onClick={handleSignOut} className="w-full text-left block px-4 py-3 text-sm font-semibold text-red-600 hover:bg-red-50 hover:text-red-700 transition border-t border-slate-100">
+                      Keluar (Sign Out)
+                    </button>
                   </div>
                 </>
               )}
@@ -118,8 +130,13 @@ export default function POSPage() {
             <h1 className="text-2xl font-black text-slate-800 tracking-tight">
               Bigphil <span className="text-blue-600">POS</span>
             </h1>
-            <div className="text-sm font-medium text-slate-500 bg-slate-100 px-3 py-1 rounded-full hidden sm:block">
-              Kasir: Admin
+            <div className="hidden sm:flex items-center gap-2">
+              <div className="text-sm font-medium text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
+                Kasir: Admin
+              </div>
+              <button onClick={handleSignOut} className="text-xs font-bold text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-full transition-colors">
+                Keluar
+              </button>
             </div>
           </div>
           
