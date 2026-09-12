@@ -7,7 +7,7 @@ import { submitTransaction } from '@/lib/supabase/transactionActions'
 import { useState } from 'react'
 import CheckoutModal from './CheckoutModal'
 
-export default function CartDrawer() {
+export default function CartDrawer({ onClose }: { onClose?: () => void }) {
   const { items, updateQuantity, totalPrice, clearCart, orderType, reduceStockAfterCheckout } = useCartStore()
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false)
 
@@ -38,6 +38,7 @@ export default function CartDrawer() {
       reduceStockAfterCheckout()
       alert("Transaksi & cetak struk berhasil!")
       clearCart()
+      if (onClose) onClose()
     } catch (error: any) {
       if (error.message.includes('globally disabled')) {
         alert("Gagal mencetak: Web Bluetooth dinonaktifkan di browser Anda.\n\nJika Anda menggunakan Brave Browser, silakan aktifkan di brave://settings/privacy (cari Web Bluetooth) atau gunakan Google Chrome.")
@@ -49,8 +50,15 @@ export default function CartDrawer() {
 
   return (
     <div className="flex flex-col h-full bg-white border-l border-slate-200 shadow-xl">
-      <div className="p-4 border-b border-slate-200 bg-slate-50">
+      <div className="p-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
         <h2 className="text-xl font-bold text-slate-800">Keranjang ({items.length})</h2>
+        {onClose && (
+          <button onClick={onClose} className="p-2 text-slate-500 hover:bg-slate-200 rounded-full md:hidden">
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">

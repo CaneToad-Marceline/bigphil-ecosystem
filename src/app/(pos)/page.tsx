@@ -17,6 +17,7 @@ export default function POSPage() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [promos, setPromos] = useState<Promotion[]>([])
   const [selectedPromo, setSelectedPromo] = useState<Promotion | null>(null)
+  const [mobileCartOpen, setMobileCartOpen] = useState(false)
 
   useEffect(() => {
     const loadData = async () => {
@@ -211,6 +212,13 @@ export default function POSPage() {
         <CartDrawer />
       </div>
 
+      {/* Mobile Cart Fullscreen Overlay */}
+      {mobileCartOpen && (
+        <div className="md:hidden fixed inset-0 z-50 bg-white slide-in-from-bottom-full animate-in duration-200">
+          <CartDrawer onClose={() => setMobileCartOpen(false)} />
+        </div>
+      )}
+
       {/* Bottom Sheet Sederhana (Untuk Mobile) */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-slate-200 flex items-center justify-between px-4 pb-2 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-30">
         <div className="font-semibold text-slate-800">Keranjang Belanja</div>
@@ -218,7 +226,10 @@ export default function POSPage() {
           <span className="font-bold text-blue-600">
             {items.length} item
           </span>
-          <button className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold text-sm">
+          <button 
+            onClick={() => setMobileCartOpen(true)}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold text-sm"
+          >
             Buka
           </button>
         </div>
