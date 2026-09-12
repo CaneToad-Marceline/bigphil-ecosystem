@@ -41,7 +41,7 @@ interface CartStore {
   totalPrice: () => number
 }
 
-export const useCartStore = create<CartStore>((set, get) => ({
+export const useCartStore = create<CartStore>()((set, get) => ({
   items: [],
   orderType: 'offline',
   products: [],
