@@ -24,7 +24,7 @@ export default function CartDrawer({ onClose }: { onClose?: () => void }) {
     setIsCheckoutModalOpen(true)
   }
 
-  const handleConfirmCheckout = async (shippingFee: number, addonFee: number, paymentMethod: string) => {
+  const handleConfirmCheckout = async (shippingFee: number, addonFee: number, paymentMethod: string, sendToWa: boolean, customerPhone: string) => {
     setIsCheckoutModalOpen(false)
     try {
       const totalAmount = totalPrice() + shippingFee + addonFee
@@ -33,18 +33,81 @@ export default function CartDrawer({ onClose }: { onClose?: () => void }) {
       await submitTransaction(items, totalAmount, shippingFee, addonFee, paymentMethod, orderType)
       
       // 2. Cetak struk via Web Bluetooth
-      await printReceipt(items, totalPrice(), orderType, shippingFee, addonFee)
+      // Note: We don't wait for this to fail/succeed to send WA, but we can try it.
+      let printSuccess = false;
+      try {
+        await printReceipt(items, totalPrice(), orderType, shippingFee, addonFee)
+        printSuccess = true;
+      } catch (printErr: any) {
+        if (printErr.message?.includes('globally disabled')) {
+          console.warn("Web Bluetooth dinonaktifkan di browser Anda.")
+        } else {
+          console.warn(`Gagal mencetak: ${printErr.message}`)
+        }
+      }
       
+      // 3. Kirim ke WA jika dipilih
+      if (sendToWa && customerPhone) {
+        // Format nomor HP ke format internasional (+62)
+        let formattedPhone = customerPhone;
+        if (formattedPhone.startsWith('0')) {
+          formattedPhone = '62' + formattedPhone.substring(1);
+        } else if (formattedPhone.startsWith('8')) {
+          formattedPhone = '62' + formattedPhone;
+        }
+
+        // Generate teks struk
+        let receiptText = `*BIGPHIL OSTEKAKE*\n`
+        receiptText += `Nusa Loka Park BSD, Plaza Cordoba, Jl. Mekar Jaya Blok H08, Banten\n`
+        receiptText += `WA: 081524321194\n`
+        receiptText += `--------------------------------\n`
+        
+        items.forEach(item => {
+          receiptText += `${item.name}\n`
+          const currentPrice = orderType === 'offline' ? item.priceOffline : item.priceMerchant;
+          const qtyPrice = `  ${item.quantity} x ${formatRupiah(currentPrice)}`;
+          const subtotal = formatRupiah(item.quantity * currentPrice);
+          receiptText += `${qtyPrice}   ${subtotal}\n`;
+          
+          if (item.isPromo && item.selectedProducts) {
+             item.selectedProducts.forEach(sp => {
+                receiptText += `  - ${sp.quantity}x ${sp.name}\n`;
+             })
+          }
+        })
+        
+        receiptText += `--------------------------------\n`
+        
+        if (shippingFee > 0) {
+          receiptText += `Ongkos Kirim   ${formatRupiah(shippingFee)}\n`
+        }
+        if (addonFee > 0) {
+          receiptText += `Add-on         ${formatRupiah(addonFee)}\n`
+        }
+        if (shippingFee > 0 || addonFee > 0) {
+          receiptText += `--------------------------------\n`
+        }
+        
+        receiptText += `*TOTAL*        *${formatRupiah(totalAmount)}*\n`
+        receiptText += `--------------------------------\n`
+        receiptText += `Terima kasih atas kunjungan Anda!\n`
+
+        const waLink = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(receiptText)}`;
+        window.open(waLink, '_blank');
+      }
+
       reduceStockAfterCheckout()
-      alert("Transaksi & cetak struk berhasil!")
+      
+      if (!printSuccess) {
+         alert("Transaksi berhasil disimpan! Namun gagal mencetak struk secara otomatis. Pastikan Bluetooth nyala.")
+      } else {
+         alert("Transaksi & cetak struk berhasil!")
+      }
+      
       clearCart()
       if (onClose) onClose()
     } catch (error: any) {
-      if (error.message.includes('globally disabled')) {
-        alert("Gagal mencetak: Web Bluetooth dinonaktifkan di browser Anda.\n\nJika Anda menggunakan Brave Browser, silakan aktifkan di brave://settings/privacy (cari Web Bluetooth) atau gunakan Google Chrome.")
-      } else {
-        alert(`Gagal mencetak: ${error.message}\n\nPastikan Anda menggunakan Google Chrome dan Bluetooth PC/HP Anda menyala.`)
-      }
+      alert(`Gagal memproses transaksi: ${error.message}`)
     }
   }
 

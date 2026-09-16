@@ -5,7 +5,7 @@ import { useState } from 'react'
 interface CheckoutModalProps {
   isOpen: boolean
   onClose: () => void
-  onConfirm: (shippingFee: number, addonFee: number, paymentMethod: string) => void
+  onConfirm: (shippingFee: number, addonFee: number, paymentMethod: string, sendToWa: boolean, customerPhone: string) => void
   itemsTotal: number
 }
 
@@ -13,6 +13,8 @@ export default function CheckoutModal({ isOpen, onClose, onConfirm, itemsTotal }
   const [shippingFee, setShippingFee] = useState<number | ''>('')
   const [addonFee, setAddonFee] = useState<number | ''>('')
   const [paymentMethod, setPaymentMethod] = useState<string>('cash')
+  const [sendToWa, setSendToWa] = useState<boolean>(false)
+  const [customerPhone, setCustomerPhone] = useState<string>('')
 
   if (!isOpen) return null
 
@@ -30,7 +32,7 @@ export default function CheckoutModal({ isOpen, onClose, onConfirm, itemsTotal }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    onConfirm(parsedShipping, parsedAddon, paymentMethod)
+    onConfirm(parsedShipping, parsedAddon, paymentMethod, sendToWa, customerPhone)
   }
 
   return (
@@ -109,6 +111,39 @@ export default function CheckoutModal({ isOpen, onClose, onConfirm, itemsTotal }
                   Transfer
                 </button>
               </div>
+            </div>
+
+            <div className="pt-2 border-t border-slate-100">
+              <label className="flex items-center gap-2 cursor-pointer mb-3">
+                <input 
+                  type="checkbox" 
+                  checked={sendToWa}
+                  onChange={(e) => setSendToWa(e.target.checked)}
+                  className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm font-semibold text-slate-700">Kirim Struk ke WA Pelanggan</span>
+              </label>
+
+              {sendToWa && (
+                <div className="animate-in fade-in slide-in-from-top-2">
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">+62</span>
+                    <input 
+                      type="tel" 
+                      value={customerPhone}
+                      onChange={(e) => {
+                        // Allow only numbers and maybe start with 0 or 8
+                        const val = e.target.value.replace(/\D/g, '')
+                        setCustomerPhone(val)
+                      }}
+                      placeholder="81234567890"
+                      className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none font-semibold text-slate-800"
+                      required={sendToWa}
+                    />
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1 ml-1">Mulai dengan angka 8 (contoh: 812345...)</p>
+                </div>
+              )}
             </div>
           </div>
           
