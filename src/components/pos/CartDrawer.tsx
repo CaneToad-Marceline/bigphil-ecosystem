@@ -24,7 +24,7 @@ export default function CartDrawer({ onClose }: { onClose?: () => void }) {
     setIsCheckoutModalOpen(true)
   }
 
-  const handleConfirmCheckout = async (shippingFee: number, addonFee: number, paymentMethod: string, sendToWa: boolean, customerPhone: string) => {
+  const handleConfirmCheckout = async (shippingFee: number, addonFee: number, paymentMethod: string, receiptType: 'print' | 'wa', customerPhone: string) => {
     setIsCheckoutModalOpen(false)
     try {
       const totalAmount = totalPrice() + shippingFee + addonFee
@@ -32,22 +32,24 @@ export default function CartDrawer({ onClose }: { onClose?: () => void }) {
       // 1. Simpan ke database Supabase
       await submitTransaction(items, totalAmount, shippingFee, addonFee, paymentMethod, orderType)
       
-      // 2. Cetak struk via Web Bluetooth
-      // Note: We don't wait for this to fail/succeed to send WA, but we can try it.
-      let printSuccess = false;
-      try {
-        await printReceipt(items, totalPrice(), orderType, shippingFee, addonFee)
-        printSuccess = true;
-      } catch (printErr: any) {
-        if (printErr.message?.includes('globally disabled')) {
-          console.warn("Web Bluetooth dinonaktifkan di browser Anda.")
-        } else {
-          console.warn(`Gagal mencetak: ${printErr.message}`)
+      let printSuccess = true;
+
+      // 2. Jika pilih cetak fisik
+      if (receiptType === 'print') {
+        try {
+          await printReceipt(items, totalPrice(), orderType, shippingFee, addonFee)
+        } catch (printErr: any) {
+          printSuccess = false;
+          if (printErr.message?.includes('globally disabled')) {
+            console.warn("Web Bluetooth dinonaktifkan di browser Anda.")
+          } else {
+            console.warn(`Gagal mencetak: ${printErr.message}`)
+          }
         }
       }
       
-      // 3. Kirim ke WA jika dipilih
-      if (sendToWa && customerPhone) {
+      // 3. Jika pilih WA
+      if (receiptType === 'wa' && customerPhone) {
         // Format nomor HP ke format internasional (+62)
         let formattedPhone = customerPhone;
         if (formattedPhone.startsWith('0')) {
@@ -98,10 +100,10 @@ export default function CartDrawer({ onClose }: { onClose?: () => void }) {
 
       reduceStockAfterCheckout()
       
-      if (!printSuccess) {
+      if (receiptType === 'print' && !printSuccess) {
          alert("Transaksi berhasil disimpan! Namun gagal mencetak struk secara otomatis. Pastikan Bluetooth nyala.")
       } else {
-         alert("Transaksi & cetak struk berhasil!")
+         alert(`Transaksi berhasil! ${receiptType === 'wa' ? 'Struk diteruskan ke WA.' : 'Struk telah dicetak.'}`)
       }
       
       clearCart()

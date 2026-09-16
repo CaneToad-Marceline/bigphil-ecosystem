@@ -5,7 +5,7 @@ import { useState } from 'react'
 interface CheckoutModalProps {
   isOpen: boolean
   onClose: () => void
-  onConfirm: (shippingFee: number, addonFee: number, paymentMethod: string, sendToWa: boolean, customerPhone: string) => void
+  onConfirm: (shippingFee: number, addonFee: number, paymentMethod: string, receiptType: 'print' | 'wa', customerPhone: string) => void
   itemsTotal: number
 }
 
@@ -13,7 +13,7 @@ export default function CheckoutModal({ isOpen, onClose, onConfirm, itemsTotal }
   const [shippingFee, setShippingFee] = useState<number | ''>('')
   const [addonFee, setAddonFee] = useState<number | ''>('')
   const [paymentMethod, setPaymentMethod] = useState<string>('cash')
-  const [sendToWa, setSendToWa] = useState<boolean>(false)
+  const [receiptType, setReceiptType] = useState<'print' | 'wa'>('print')
   const [customerPhone, setCustomerPhone] = useState<string>('')
 
   if (!isOpen) return null
@@ -32,7 +32,7 @@ export default function CheckoutModal({ isOpen, onClose, onConfirm, itemsTotal }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    onConfirm(parsedShipping, parsedAddon, paymentMethod, sendToWa, customerPhone)
+    onConfirm(parsedShipping, parsedAddon, paymentMethod, receiptType, customerPhone)
   }
 
   return (
@@ -114,17 +114,31 @@ export default function CheckoutModal({ isOpen, onClose, onConfirm, itemsTotal }
             </div>
 
             <div className="pt-2 border-t border-slate-100">
-              <label className="flex items-center gap-2 cursor-pointer mb-3">
-                <input 
-                  type="checkbox" 
-                  checked={sendToWa}
-                  onChange={(e) => setSendToWa(e.target.checked)}
-                  className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                />
-                <span className="text-sm font-semibold text-slate-700">Kirim Struk ke WA Pelanggan</span>
-              </label>
+              <label className="block text-sm font-semibold text-slate-700 mb-2">Metode Struk</label>
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                <button
+                  type="button"
+                  onClick={() => setReceiptType('print')}
+                  className={`py-2 rounded-xl font-bold border transition flex items-center justify-center gap-2 ${receiptType === 'print' ? 'bg-blue-50 border-blue-600 text-blue-700' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                  </svg>
+                  Cetak Fisik
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReceiptType('wa')}
+                  className={`py-2 rounded-xl font-bold border transition flex items-center justify-center gap-2 ${receiptType === 'wa' ? 'bg-green-50 border-green-600 text-green-700' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  </svg>
+                  Kirim WA
+                </button>
+              </div>
 
-              {sendToWa && (
+              {receiptType === 'wa' && (
                 <div className="animate-in fade-in slide-in-from-top-2">
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">+62</span>
@@ -138,7 +152,7 @@ export default function CheckoutModal({ isOpen, onClose, onConfirm, itemsTotal }
                       }}
                       placeholder="81234567890"
                       className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none font-semibold text-slate-800"
-                      required={sendToWa}
+                      required={receiptType === 'wa'}
                     />
                   </div>
                   <p className="text-xs text-slate-500 mt-1 ml-1">Mulai dengan angka 8 (contoh: 812345...)</p>
@@ -156,10 +170,7 @@ export default function CheckoutModal({ isOpen, onClose, onConfirm, itemsTotal }
               type="submit"
               className="w-full bg-blue-600 text-white font-bold py-4 rounded-xl active:scale-[0.98] transition-transform shadow-lg shadow-blue-600/30 flex items-center justify-center gap-2 text-lg"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-              </svg>
-              Konfirmasi & Cetak
+              Konfirmasi & {receiptType === 'print' ? 'Cetak' : 'Kirim WA'}
             </button>
           </div>
         </form>
