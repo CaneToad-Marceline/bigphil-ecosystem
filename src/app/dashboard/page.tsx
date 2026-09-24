@@ -5,14 +5,27 @@ import { supabase } from '@/lib/supabase/client'
 import StatCard from '@/components/dashboard/StatCard'
 import HeroSkuChart from '@/components/dashboard/HeroSkuChart'
 import { getSummaryMetrics, getHeroSKU, TimeFilter, SummaryMetrics, HeroSKU } from '@/lib/supabase/analytics'
-import { cancelTransaction } from '@/lib/supabase/transactionActions'
+import { cancelTransaction, getTransactionDetails } from '@/lib/supabase/transactionActions'
 
 interface Transaction {
   id: string
   total_amount: number
+  shipping_fee?: number
+  addon_fee?: number
   payment_method: string
+  order_type?: string
   status: string
   created_at: string
+}
+
+interface TransactionItem {
+  id: string
+  quantity: number
+  price_at_time: number
+  product_id?: string
+  promo_id?: string
+  products?: { name: string; description: string }
+  promotions?: { name: string }
 }
 
 export default function DashboardPage() {
@@ -22,6 +35,11 @@ export default function DashboardPage() {
   const [metrics, setMetrics] = useState<SummaryMetrics>({ totalRevenue: 0, totalTransactions: 0, netProfit: 0 })
   const [heroSKUs, setHeroSKUs] = useState<HeroSKU[]>([])
   const [isLoading, setIsLoading] = useState(true)
+
+  // Modal states
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [selectedTxDetails, setSelectedTxDetails] = useState<{ transaction: Transaction; items: TransactionItem[] } | null>(null)
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false)
 
   const fetchTransactions = async () => {
     const { data, error } = await supabase
@@ -98,7 +116,8 @@ export default function DashboardPage() {
     }
   }, [filter, customDate.start, customDate.end])
 
-  const handleCancel = async (txId: string) => {
+  const handleCancel = async (e: React.MouseEvent, txId: string) => {
+    e.stopPropagation() // Prevent row click
     if (window.confirm('Apakah Anda yakin ingin membatalkan transaksi ini? Stok barang akan dikembalikan ke database.')) {
       try {
         await cancelTransaction(txId)
@@ -108,6 +127,22 @@ export default function DashboardPage() {
         console.error(error)
         alert('Terjadi kesalahan saat membatalkan transaksi. Silakan periksa koneksi atau log konsol.')
       }
+    }
+  }
+
+  const handleRowClick = async (txId: string) => {
+    setIsModalOpen(true)
+    setIsLoadingDetails(true)
+    setSelectedTxDetails(null)
+    try {
+      const details = await getTransactionDetails(txId)
+      setSelectedTxDetails({ transaction: details, items: details.items })
+    } catch (error) {
+      console.error("Gagal mengambil detail transaksi:", error)
+      alert("Gagal memuat detail transaksi.")
+      setIsModalOpen(false)
+    } finally {
+      setIsLoadingDetails(false)
     }
   }
 
@@ -276,7 +311,11 @@ export default function DashboardPage() {
                     </tr>
                   ) : (
                     transactions.map((tx) => (
-                      <tr key={tx.id} className="border-b border-slate-100 hover:bg-slate-50 transition">
+                      <tr 
+                        key={tx.id} 
+                        onClick={() => handleRowClick(tx.id)}
+                        className="border-b border-slate-100 hover:bg-blue-50 transition cursor-pointer"
+                      >
                         <td className="p-4 text-sm text-slate-600 whitespace-nowrap">
                           {formatWaktu(tx.created_at)}
                         </td>
@@ -291,7 +330,7 @@ export default function DashboardPage() {
                         <td className="p-4 text-center">
                           {tx.status === 'completed' ? (
                             <button 
-                              onClick={() => handleCancel(tx.id)}
+                              onClick={(e) => handleCancel(e, tx.id)}
                               className="text-xs font-semibold text-white bg-red-500 hover:bg-red-600 px-3 py-1.5 rounded transition active:scale-95"
                             >
                               Batalkan
@@ -309,6 +348,141 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Modal Detail Transaksi */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setIsModalOpen(false)}>
+          <div 
+            className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+              <h3 className="text-lg font-bold text-slate-800">Detail Transaksi</h3>
+              <button 
+                onClick={() => setIsModalOpen(false)}
+                className="text-slate-400 hover:text-slate-700 hover:bg-slate-200 p-2 rounded-full transition"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 max-h-[70vh] overflow-y-auto">
+              {isLoadingDetails ? (
+                <div className="flex flex-col items-center justify-center py-12 text-slate-500">
+                  <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                  Memuat detail...
+                </div>
+              ) : selectedTxDetails ? (
+                <div className="space-y-6">
+                  {/* Info Transaksi */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-slate-50 p-4 rounded-xl">
+                    <div>
+                      <p className="text-xs text-slate-500 font-medium mb-1">Tanggal & Waktu</p>
+                      <p className="text-sm font-semibold text-slate-800">{formatWaktu(selectedTxDetails.transaction.created_at)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500 font-medium mb-1">Tipe Order</p>
+                      <p className="text-sm font-semibold text-slate-800 capitalize">{selectedTxDetails.transaction.order_type || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500 font-medium mb-1">Pembayaran</p>
+                      <p className="text-sm font-semibold text-slate-800 uppercase">{selectedTxDetails.transaction.payment_method}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500 font-medium mb-1">Status</p>
+                      <span className={`px-2 py-0.5 rounded text-xs font-bold ${selectedTxDetails.transaction.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                        {selectedTxDetails.transaction.status}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Daftar Item */}
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-800 mb-3 border-b pb-2">Item Pembelian</h4>
+                    <div className="space-y-3">
+                      {selectedTxDetails.items.map((item, idx) => (
+                        <div key={item.id} className="flex justify-between items-center bg-white border border-slate-100 p-3 rounded-lg shadow-sm">
+                          <div>
+                            <p className="font-semibold text-slate-800 text-sm">
+                              {item.product_id ? item.products?.name : item.promotions?.name}
+                            </p>
+                            {item.product_id && item.products?.description && (
+                              <p className="text-xs text-slate-500">{item.products.description}</p>
+                            )}
+                            <p className="text-xs font-medium text-blue-600 mt-1">
+                              {item.quantity} x {formatRupiah(item.price_at_time)}
+                            </p>
+                          </div>
+                          <p className="font-bold text-slate-800">
+                            {formatRupiah(item.quantity * item.price_at_time)}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Ringkasan Biaya */}
+                  <div className="border-t pt-4 space-y-2">
+                    <div className="flex justify-between text-sm text-slate-600">
+                      <span>Subtotal Item</span>
+                      <span>
+                        {formatRupiah(
+                          selectedTxDetails.items.reduce((acc, curr) => acc + (curr.quantity * curr.price_at_time), 0)
+                        )}
+                      </span>
+                    </div>
+                    {(selectedTxDetails.transaction.shipping_fee || 0) > 0 && (
+                      <div className="flex justify-between text-sm text-slate-600">
+                        <span>Ongkos Kirim</span>
+                        <span>{formatRupiah(selectedTxDetails.transaction.shipping_fee || 0)}</span>
+                      </div>
+                    )}
+                    {(selectedTxDetails.transaction.addon_fee || 0) > 0 && (
+                      <div className="flex justify-between text-sm text-slate-600">
+                        <span>Biaya Tambahan</span>
+                        <span>{formatRupiah(selectedTxDetails.transaction.addon_fee || 0)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-lg font-bold text-slate-900 pt-2 border-t">
+                      <span>Total Keseluruhan</span>
+                      <span>{formatRupiah(selectedTxDetails.transaction.total_amount)}</span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="py-8 text-center text-red-500">
+                  Data tidak ditemukan.
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-between items-center">
+              {selectedTxDetails && selectedTxDetails.transaction.status === 'completed' ? (
+                <button 
+                  onClick={(e) => {
+                    handleCancel(e, selectedTxDetails.transaction.id)
+                    setIsModalOpen(false)
+                  }}
+                  className="px-4 py-2 bg-red-100 text-red-700 font-semibold rounded-lg hover:bg-red-200 transition text-sm flex items-center gap-2"
+                >
+                  <span className="text-lg">⚠</span> Batalkan Transaksi
+                </button>
+              ) : (
+                <div></div> // empty div to keep spacing if button is absent
+              )}
+              <button 
+                onClick={() => setIsModalOpen(false)}
+                className="px-4 py-2 bg-slate-800 text-white font-semibold rounded-lg hover:bg-slate-900 transition text-sm"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

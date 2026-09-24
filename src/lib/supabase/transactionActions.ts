@@ -146,3 +146,45 @@ export async function cancelTransaction(transactionId: string) {
     throw error
   }
 }
+
+export async function getTransactionDetails(transactionId: string) {
+  try {
+    const { data: transaction, error: txError } = await supabase
+      .from('transactions')
+      .select('*')
+      .eq('id', transactionId)
+      .single()
+
+    if (txError) throw txError
+
+    const { data: items, error: itemsError } = await supabase
+      .from('transaction_items')
+      .select(`
+        id,
+        quantity,
+        price_at_time,
+        product_id,
+        promo_id,
+        products (
+          id,
+          name,
+          description
+        ),
+        promotions (
+          id,
+          name
+        )
+      `)
+      .eq('transaction_id', transactionId)
+
+    if (itemsError) throw itemsError
+
+    return {
+      ...transaction,
+      items: items || []
+    }
+  } catch (error: any) {
+    console.error("Error fetching transaction details:", error)
+    throw error
+  }
+}
