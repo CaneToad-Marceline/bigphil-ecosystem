@@ -27,7 +27,7 @@ export default function DashboardLayout({
   ]
 
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden">
+    <div className="flex h-[100dvh] bg-slate-50 overflow-hidden">
       
       {/* Mobile Header (Hanya tampil di layar kecil) */}
       <header className="md:hidden fixed top-0 left-0 right-0 z-40 bg-slate-900 shadow-md flex justify-between items-center px-4 py-3">
@@ -60,7 +60,7 @@ export default function DashboardLayout({
 
       {/* Sidebar - Desktop (Tetap) & Mobile (Slide-in) */}
       <aside 
-        className={`fixed md:static inset-y-0 left-0 z-50 w-64 bg-slate-900 text-slate-300 flex flex-col h-screen shadow-xl transition-transform duration-300 ease-in-out ${
+        className={`fixed md:static inset-y-0 left-0 z-50 w-64 bg-slate-900 text-slate-300 flex flex-col h-[100dvh] shadow-xl transition-transform duration-300 ease-in-out ${
           isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
       >
