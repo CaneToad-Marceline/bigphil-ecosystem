@@ -47,11 +47,6 @@ export default function DashboardLayout({
               </Link>
             </li>
             <li>
-              <Link href="/dashboard/chat" className={`block px-4 py-3 rounded-lg font-medium transition ${pathname === '/dashboard/chat' ? 'bg-blue-600 text-white' : 'hover:bg-slate-800 text-slate-300'}`}>
-                Log AI Chat
-              </Link>
-            </li>
-            <li>
               <Link href="/dashboard/promo" className={`block px-4 py-3 rounded-lg font-medium transition ${pathname === '/dashboard/promo' ? 'bg-blue-600 text-white' : 'hover:bg-slate-800 text-slate-300'}`}>
                 Manajemen Promo
               </Link>
