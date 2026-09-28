@@ -276,7 +276,7 @@ export default function DashboardPage() {
                 <thead>
                   <tr className="bg-amber-50 border-b border-amber-200 text-amber-800 text-sm">
                     <th className="p-4 font-semibold whitespace-nowrap">PRODUK</th>
-                    <th className="p-4 font-semibold whitespace-nowrap">UKURAN</th>
+                    <th className="p-4 font-semibold whitespace-nowrap">VARIAN</th>
                     <th className="p-4 font-semibold whitespace-nowrap text-center">TERJUAL</th>
                     <th className="p-4 font-semibold whitespace-nowrap text-right">PENDAPATAN</th>
                   </tr>
@@ -300,7 +300,7 @@ export default function DashboardPage() {
                           {sku.name}
                         </td>
                         <td className="p-4 text-sm text-slate-600">
-                          <span className="bg-slate-100 px-2 py-1 rounded text-xs font-semibold">{sku.size}</span>
+                          <span className="bg-slate-100 px-2 py-1 rounded text-xs font-semibold">{sku.variant}</span>
                         </td>
                         <td className="p-4 text-center font-bold text-blue-600 text-lg">
                           {sku.unitsSold}

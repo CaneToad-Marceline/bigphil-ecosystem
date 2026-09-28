@@ -115,7 +115,7 @@ export const exportDashboardToExcel = async (
     // Sheet 4: Leaderboard Produk (Hero SKUs)
     const heroSheetData = heroSKUs.map(sku => ({
       'Nama Produk': sku.name,
-      'Ukuran': sku.size,
+      'Varian': sku.variant,
       'Unit Terjual': sku.unitsSold,
       'Total Pendapatan': sku.totalRevenue
     }));

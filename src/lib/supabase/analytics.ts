@@ -15,7 +15,7 @@ export interface SummaryMetrics {
 export interface HeroSKU {
   id: string
   name: string
-  size: string
+  variant: string
   unitsSold: number
   totalRevenue: number
 }
@@ -94,20 +94,6 @@ export const getSummaryMetrics = async (filter: TimeFilter, customRange?: { star
 }
 
 /**
- * Mengekstrak ukuran dari nama produk
- */
-const extractSize = (name: string): string => {
-  const lowerName = name.toLowerCase()
-  if (lowerName.includes('150') || lowerName.includes('small')) {
-    return 'Small 150ml'
-  }
-  if (lowerName.includes('300') || lowerName.includes('big')) {
-    return 'Big 300ml'
-  }
-  return '-'
-}
-
-/**
  * Mengambil data Hero SKU (Leaderboard Produk Terlaris)
  */
 export const getHeroSKU = async (filter: TimeFilter, limit: number = 10, customRange?: { start: Date, end: Date }): Promise<HeroSKU[]> => {
@@ -116,7 +102,7 @@ export const getHeroSKU = async (filter: TimeFilter, limit: number = 10, customR
     .select(`
       quantity,
       price_at_time,
-      products ( id, name ),
+      products ( id, name, description ),
       transactions!inner ( status, created_at )
     `)
     .eq('transactions.status', 'completed')
@@ -152,7 +138,7 @@ export const getHeroSKU = async (filter: TimeFilter, limit: number = 10, customR
       skuMap[productId] = {
         id: productId,
         name: product.name,
-        size: extractSize(product.name),
+        variant: product.description || '-',
         unitsSold: 0,
         totalRevenue: 0
       }
