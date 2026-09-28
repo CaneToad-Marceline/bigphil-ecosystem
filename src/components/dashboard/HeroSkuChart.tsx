@@ -19,7 +19,7 @@ export default function HeroSkuChart({ data }: HeroSkuChartProps) {
   // Format data untuk mempermudah render label sumbu Y (menggabungkan nama dan ukuran)
   const chartData = data.map(item => ({
     ...item,
-    displayName: `${item.name} (${item.size.split(' ')[0]})`, // Misal: Ostekake (Small)
+    displayName: `${item.name} (${item.variant ? item.variant.split(' ')[0] : '-'})`, // Menggunakan kata pertama dari varian
   }))
 
   return (
