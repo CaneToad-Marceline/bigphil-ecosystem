@@ -59,7 +59,7 @@ export const exportDashboardToExcel = async (
       const { data, error: itemsError } = await supabase
         .from('transaction_items')
         .select(`
-          id, transaction_id, quantity, price_at_time,
+          id, transaction_id, quantity, price_at_time, promo_id, product_id,
           products ( name ), promotions ( name )
         `)
         .in('transaction_id', completedTxIds);
@@ -70,14 +70,18 @@ export const exportDashboardToExcel = async (
 
     const wb = XLSX.utils.book_new();
 
+    const periodText = filter === 'custom' ? `${customRange.start} s/d ${customRange.end}` : filter;
+
     // Sheet 1: Ringkasan
     const summaryData = [
-      ['Periode Filter', filter === 'custom' ? `${customRange.start} s/d ${customRange.end}` : filter],
+      ['Periode Filter', periodText],
       ['Total Pendapatan', metrics.totalRevenue],
       ['Total Laba Bersih', metrics.netProfit],
       ['Jumlah Transaksi Selesai', metrics.totalTransactions],
     ];
     const wsSummary = XLSX.utils.aoa_to_sheet([
+      [`LAPORAN RINGKASAN PENJUALAN - PERIODE: ${periodText.toUpperCase()}`],
+      [],
       ['Parameter', 'Nilai'],
       ...summaryData
     ]);
@@ -96,20 +100,43 @@ export const exportDashboardToExcel = async (
       'Biaya Tambahan': tx.addon_fee || 0,
       'Total Keseluruhan': tx.total_amount
     })) || [];
-    const wsTx = XLSX.utils.json_to_sheet(txSheetData);
+    const wsTx = XLSX.utils.aoa_to_sheet([
+      [`DAFTAR TRANSAKSI - PERIODE: ${periodText.toUpperCase()}`],
+      []
+    ]);
+    XLSX.utils.sheet_add_json(wsTx, txSheetData, { origin: 'A3' });
     wsTx['!cols'] = [{ wch: 36 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 18 }, { wch: 15 }, { wch: 15 }, { wch: 20 }];
     XLSX.utils.book_append_sheet(wb, wsTx, 'Daftar Transaksi');
 
     // Sheet 3: Detail Item
-    const itemsSheetData = itemsData.map(item => ({
-      'ID Transaksi': item.transaction_id,
-      'Nama Item': item.products?.name || item.promotions?.name || 'Item tidak diketahui',
-      'Harga Satuan': item.price_at_time,
-      'Jumlah': item.quantity,
-      'Subtotal': item.price_at_time * item.quantity
-    }));
-    const wsItems = XLSX.utils.json_to_sheet(itemsSheetData);
-    wsItems['!cols'] = [{ wch: 36 }, { wch: 30 }, { wch: 15 }, { wch: 10 }, { wch: 15 }];
+    const itemsSheetData = itemsData.map(item => {
+      let itemName = 'Item tidak diketahui';
+      
+      if (item.product_id && item.promo_id) {
+        // Ini adalah produk di dalam paket promo
+        itemName = `  - ${item.products?.name} (Isi Paket)`;
+      } else if (item.promo_id && !item.product_id) {
+        // Ini adalah header paket promo
+        itemName = `[Promo] ${item.promotions?.name}`;
+      } else if (item.product_id) {
+        // Ini adalah produk satuan biasa
+        itemName = item.products?.name || itemName;
+      }
+
+      return {
+        'ID Transaksi': item.transaction_id,
+        'Nama Item': itemName,
+        'Harga Satuan': item.price_at_time,
+        'Jumlah': item.quantity,
+        'Subtotal': item.price_at_time * item.quantity
+      };
+    });
+    const wsItems = XLSX.utils.aoa_to_sheet([
+      [`DETAIL ITEM PEMBELIAN - PERIODE: ${periodText.toUpperCase()}`],
+      []
+    ]);
+    XLSX.utils.sheet_add_json(wsItems, itemsSheetData, { origin: 'A3' });
+    wsItems['!cols'] = [{ wch: 36 }, { wch: 40 }, { wch: 15 }, { wch: 10 }, { wch: 15 }];
     XLSX.utils.book_append_sheet(wb, wsItems, 'Detail Item Pembelian');
 
     // Sheet 4: Leaderboard Produk (Hero SKUs)
@@ -119,7 +146,11 @@ export const exportDashboardToExcel = async (
       'Unit Terjual': sku.unitsSold,
       'Total Pendapatan': sku.totalRevenue
     }));
-    const wsHero = XLSX.utils.json_to_sheet(heroSheetData);
+    const wsHero = XLSX.utils.aoa_to_sheet([
+      [`LEADERBOARD PRODUK - PERIODE: ${periodText.toUpperCase()}`],
+      []
+    ]);
+    XLSX.utils.sheet_add_json(wsHero, heroSheetData, { origin: 'A3' });
     wsHero['!cols'] = [{ wch: 30 }, { wch: 15 }, { wch: 15 }, { wch: 20 }];
     XLSX.utils.book_append_sheet(wb, wsHero, 'Produk Terlaris');
 

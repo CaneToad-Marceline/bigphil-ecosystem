@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import StatCard from '@/components/dashboard/StatCard'
 import HeroSkuChart from '@/components/dashboard/HeroSkuChart'
+import SalesPieChart from '@/components/dashboard/SalesPieChart'
 import { getSummaryMetrics, getHeroSKU, TimeFilter, SummaryMetrics, HeroSKU } from '@/lib/supabase/analytics'
 import { cancelTransaction, getTransactionDetails } from '@/lib/supabase/transactionActions'
 import { exportDashboardToExcel } from '@/lib/exportExcel'
@@ -252,24 +253,47 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* Grafik Hero SKU */}
-      <div>
-        <h3 className="text-xl font-bold text-slate-800 mb-4">📈 Grafik Hero SKU (Unit Terjual)</h3>
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
-          {isLoading ? (
-            <div className="h-[400px] flex items-center justify-center text-slate-500">Memuat grafik...</div>
-          ) : heroSKUs.length === 0 ? (
-            <div className="h-[400px] flex items-center justify-center text-slate-500">Belum ada data penjualan pada periode ini.</div>
-          ) : (
-            <HeroSkuChart data={heroSKUs} />
-          )}
+      {/* Area Grafik */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Grafik Hero SKU (Bar) */}
+        <div>
+          <div className="mb-4">
+            <h3 className="text-xl font-bold text-slate-800">Tren Penjualan (Unit Terjual)</h3>
+            <p className="text-sm text-slate-500">Visualisasi produk dan paket promo yang paling banyak dibeli.</p>
+          </div>
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+            {isLoading ? (
+              <div className="h-[400px] flex items-center justify-center text-slate-500">Memuat grafik...</div>
+            ) : heroSKUs.length === 0 ? (
+              <div className="h-[400px] flex items-center justify-center text-slate-500">Belum ada data penjualan pada periode ini.</div>
+            ) : (
+              <HeroSkuChart data={heroSKUs} />
+            )}
+          </div>
+        </div>
+
+        {/* Grafik Distribusi Pendapatan (Pie) */}
+        <div>
+          <div className="mb-4">
+            <h3 className="text-xl font-bold text-slate-800">Distribusi Pendapatan (Rupiah)</h3>
+            <p className="text-sm text-slate-500">Proporsi kontribusi pendapatan dari masing-masing item dan promo.</p>
+          </div>
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+            {isLoading ? (
+              <div className="h-[400px] flex items-center justify-center text-slate-500">Memuat grafik...</div>
+            ) : heroSKUs.filter(sku => sku.totalRevenue > 0).length === 0 ? (
+              <div className="h-[400px] flex items-center justify-center text-slate-500">Belum ada data pendapatan pada periode ini.</div>
+            ) : (
+              <SalesPieChart data={heroSKUs} />
+            )}
+          </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
         {/* Leaderboard Hero SKU */}
         <div>
-          <h3 className="text-xl font-bold text-slate-800 mb-4">🏆 Leaderboard Produk (Hero SKU)</h3>
+          <h3 className="text-xl font-bold text-slate-800 mb-4">Leaderboard Produk (Hero SKU)</h3>
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
@@ -294,9 +318,9 @@ export default function DashboardPage() {
                     heroSKUs.map((sku, index) => (
                       <tr key={sku.id} className="border-b border-slate-100 hover:bg-slate-50 transition">
                         <td className="p-4 font-medium text-slate-700 flex items-center gap-2">
-                          {index === 0 && <span title="Top 1">🥇</span>}
-                          {index === 1 && <span title="Top 2">🥈</span>}
-                          {index === 2 && <span title="Top 3">🥉</span>}
+                          {index === 0 && <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-bold rounded-full">Top 1</span>}
+                          {index === 1 && <span className="px-2 py-1 bg-slate-100 text-slate-600 text-xs font-bold rounded-full">Top 2</span>}
+                          {index === 2 && <span className="px-2 py-1 bg-amber-100 text-amber-700 text-xs font-bold rounded-full">Top 3</span>}
                           {sku.name}
                         </td>
                         <td className="p-4 text-sm text-slate-600">

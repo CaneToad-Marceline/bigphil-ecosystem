@@ -103,6 +103,7 @@ export const getHeroSKU = async (filter: TimeFilter, limit: number = 10, customR
       quantity,
       price_at_time,
       products ( id, name, description ),
+      promotions ( id, name ),
       transactions!inner ( status, created_at )
     `)
     .eq('transactions.status', 'completed')
@@ -127,25 +128,41 @@ export const getHeroSKU = async (filter: TimeFilter, limit: number = 10, customR
   const skuMap: Record<string, HeroSKU> = {}
 
   data.forEach((item: any) => {
+    const isPromo = !!item.promotions
     const product = item.products
-    if (!product) return
+    
+    // Jika tidak ada produk dan bukan promo, skip
+    if (!product && !isPromo) return
+    
+    // Jangan tampilkan produk di dalam promo jika harganya 0 (karena pendapatannya masuk ke promo header)
+    // Atau tetap tampilkan tapi harganya memang 0. Kita pilih tetap tampilkan agar kelihatan barangnya laku.
+    
+    let itemId, itemName, itemVariant;
+    if (isPromo) {
+      itemId = item.promotions.id
+      itemName = item.promotions.name
+      itemVariant = 'Paket Promo'
+    } else {
+      itemId = product.id
+      itemName = product.name
+      itemVariant = product.description || '-'
+    }
 
-    const productId = product.id
     const quantity = Number(item.quantity)
     const subtotal = Number(item.price_at_time) * quantity
     
-    if (!skuMap[productId]) {
-      skuMap[productId] = {
-        id: productId,
-        name: product.name,
-        variant: product.description || '-',
+    if (!skuMap[itemId]) {
+      skuMap[itemId] = {
+        id: itemId,
+        name: itemName,
+        variant: itemVariant,
         unitsSold: 0,
         totalRevenue: 0
       }
     }
 
-    skuMap[productId].unitsSold += quantity
-    skuMap[productId].totalRevenue += subtotal
+    skuMap[itemId].unitsSold += quantity
+    skuMap[itemId].totalRevenue += subtotal
   })
 
   // Ubah ke array dan urutkan berdasarkan unit terjual (descending)
