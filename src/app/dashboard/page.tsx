@@ -6,6 +6,7 @@ import StatCard from '@/components/dashboard/StatCard'
 import HeroSkuChart from '@/components/dashboard/HeroSkuChart'
 import { getSummaryMetrics, getHeroSKU, TimeFilter, SummaryMetrics, HeroSKU } from '@/lib/supabase/analytics'
 import { cancelTransaction, getTransactionDetails } from '@/lib/supabase/transactionActions'
+import { exportDashboardToExcel } from '@/lib/exportExcel'
 
 interface Transaction {
   id: string
@@ -40,6 +41,7 @@ export default function DashboardPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedTxDetails, setSelectedTxDetails] = useState<{ transaction: Transaction; items: TransactionItem[] } | null>(null)
   const [isLoadingDetails, setIsLoadingDetails] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
 
   const fetchTransactions = async () => {
     const { data, error } = await supabase
@@ -47,7 +49,7 @@ export default function DashboardPage() {
       .select('*')
       .order('created_at', { ascending: false })
       .limit(20) // Kurangi limit untuk performa karena ada tabel lain
-      
+
     if (!error && data) {
       setTransactions(data)
     }
@@ -57,7 +59,7 @@ export default function DashboardPage() {
     if (filter === 'custom' && (!customDate.start || !customDate.end)) {
       return // Jangan load jika custom date belum dipilih keduanya
     }
-    
+
     setIsLoading(true)
     let range = undefined
     if (filter === 'custom') {
@@ -90,7 +92,7 @@ export default function DashboardPage() {
         (payload) => {
           console.log('Transaksi baru diterima realtime:', payload)
           setTransactions((prev) => [payload.new as Transaction, ...prev].slice(0, 20))
-          
+
           // Refresh analytics saat ada transaksi baru yang completed
           if (payload.new.status === 'completed') {
             loadAnalytics()
@@ -103,7 +105,7 @@ export default function DashboardPage() {
         (payload) => {
           console.log('Transaksi diupdate realtime:', payload)
           // Update status transaksi di state tabel
-          setTransactions((prev) => 
+          setTransactions((prev) =>
             prev.map(tx => tx.id === payload.new.id ? payload.new as Transaction : tx)
           )
           loadAnalytics()
@@ -161,31 +163,46 @@ export default function DashboardPage() {
     })
   }
 
+  const handleExport = async () => {
+    setIsExporting(true)
+    try {
+      const result = await exportDashboardToExcel(filter, customDate, metrics, heroSKUs)
+      if (!result.success) {
+        alert('Gagal mengekspor data ke Excel. Silakan periksa koneksi.')
+      }
+    } catch (error) {
+      console.error('Failed to export:', error)
+      alert('Terjadi kesalahan saat mengekspor.')
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
   return (
     <div className="p-6 md:p-10 space-y-8">
       {/* Header & Filter */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <h2 className="text-3xl font-bold text-slate-800">Ringkasan Penjualan</h2>
-        
+
         <div className="flex flex-wrap items-center gap-3">
           {filter === 'custom' && (
             <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-4 duration-300">
-              <input 
-                type="date" 
-                value={customDate.start} 
-                onChange={e => setCustomDate({...customDate, start: e.target.value})}
+              <input
+                type="date"
+                value={customDate.start}
+                onChange={e => setCustomDate({ ...customDate, start: e.target.value })}
                 className="bg-white border border-slate-300 text-slate-800 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2 font-medium shadow-sm"
               />
               <span className="text-slate-500 font-medium">s/d</span>
-              <input 
-                type="date" 
-                value={customDate.end} 
-                onChange={e => setCustomDate({...customDate, end: e.target.value})}
+              <input
+                type="date"
+                value={customDate.end}
+                onChange={e => setCustomDate({ ...customDate, end: e.target.value })}
                 className="bg-white border border-slate-300 text-slate-800 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2 font-medium shadow-sm"
               />
             </div>
           )}
-          <select 
+          <select
             value={filter}
             onChange={(e) => setFilter(e.target.value as TimeFilter)}
             className="bg-white border border-slate-300 text-slate-800 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 font-medium shadow-sm cursor-pointer"
@@ -195,27 +212,39 @@ export default function DashboardPage() {
             <option value="monthly">Bulan Ini</option>
             <option value="custom">Kustom</option>
           </select>
+          <button
+            onClick={handleExport}
+            disabled={isExporting}
+            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 px-4 rounded-lg shadow-sm transition active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
+          >
+            {isExporting ? (
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            ) : (
+              <span>📊</span>
+            )}
+            {isExporting ? 'Mengekspor...' : 'Export Excel'}
+          </button>
         </div>
       </div>
 
       {/* Stat Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <StatCard 
-          title="Total Pendapatan" 
+        <StatCard
+          title="Total Pendapatan"
           value={isLoading ? '...' : formatRupiah(metrics.totalRevenue)}
           subtitle={`Periode: ${filter === 'daily' ? 'Hari Ini' : filter === 'weekly' ? 'Minggu Ini' : filter === 'monthly' ? 'Bulan Ini' : `${customDate.start || '?'} s/d ${customDate.end || '?'}`}`}
           colorClass="bg-blue-50 border-blue-100"
           icon={<span className="text-xl">💰</span>}
         />
-        <StatCard 
-          title="Pemasukan Bersih (Laba)" 
+        <StatCard
+          title="Pemasukan Bersih (Laba)"
           value={isLoading ? '...' : formatRupiah(metrics.netProfit)}
           subtitle={`Periode: ${filter === 'daily' ? 'Hari Ini' : filter === 'weekly' ? 'Minggu Ini' : filter === 'monthly' ? 'Bulan Ini' : `${customDate.start || '?'} s/d ${customDate.end || '?'}`}`}
           colorClass="bg-purple-50 border-purple-100"
           icon={<span className="text-xl">📈</span>}
         />
-        <StatCard 
-          title="Jumlah Transaksi" 
+        <StatCard
+          title="Jumlah Transaksi"
           value={isLoading ? '...' : metrics.totalTransactions}
           subtitle={`Periode: ${filter === 'daily' ? 'Hari Ini' : filter === 'weekly' ? 'Minggu Ini' : filter === 'monthly' ? 'Bulan Ini' : `${customDate.start || '?'} s/d ${customDate.end || '?'}`}`}
           colorClass="bg-emerald-50 border-emerald-100"
@@ -311,8 +340,8 @@ export default function DashboardPage() {
                     </tr>
                   ) : (
                     transactions.map((tx) => (
-                      <tr 
-                        key={tx.id} 
+                      <tr
+                        key={tx.id}
                         onClick={() => handleRowClick(tx.id)}
                         className="border-b border-slate-100 hover:bg-blue-50 transition cursor-pointer"
                       >
@@ -329,7 +358,7 @@ export default function DashboardPage() {
                         </td>
                         <td className="p-4 text-center">
                           {tx.status === 'completed' ? (
-                            <button 
+                            <button
                               onClick={(e) => handleCancel(e, tx.id)}
                               className="text-xs font-semibold text-white bg-red-500 hover:bg-red-600 px-3 py-1.5 rounded transition active:scale-95"
                             >
@@ -352,14 +381,14 @@ export default function DashboardPage() {
       {/* Modal Detail Transaksi */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setIsModalOpen(false)}>
-          <div 
+          <div
             className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
             <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
               <h3 className="text-lg font-bold text-slate-800">Detail Transaksi</h3>
-              <button 
+              <button
                 onClick={() => setIsModalOpen(false)}
                 className="text-slate-400 hover:text-slate-700 hover:bg-slate-200 p-2 rounded-full transition"
               >
@@ -461,7 +490,7 @@ export default function DashboardPage() {
             {/* Modal Footer */}
             <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-between items-center">
               {selectedTxDetails && selectedTxDetails.transaction.status === 'completed' ? (
-                <button 
+                <button
                   onClick={(e) => {
                     handleCancel(e, selectedTxDetails.transaction.id)
                     setIsModalOpen(false)
@@ -473,7 +502,7 @@ export default function DashboardPage() {
               ) : (
                 <div></div> // empty div to keep spacing if button is absent
               )}
-              <button 
+              <button
                 onClick={() => setIsModalOpen(false)}
                 className="px-4 py-2 bg-slate-800 text-white font-semibold rounded-lg hover:bg-slate-900 transition text-sm"
               >
