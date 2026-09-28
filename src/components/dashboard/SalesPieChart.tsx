@@ -66,9 +66,8 @@ export default function SalesPieChart({ data }: SalesPieChartProps) {
           <Tooltip content={<CustomTooltip />} />
           <Legend 
             verticalAlign="bottom" 
-            height={36} 
             iconType="circle"
-            wrapperStyle={{ fontSize: '12px', paddingTop: '20px' }}
+            wrapperStyle={{ fontSize: '11px', paddingTop: '20px' }}
           />
         </PieChart>
       </ResponsiveContainer>

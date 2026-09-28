@@ -16,11 +16,14 @@ interface HeroSkuChartProps {
 }
 
 export default function HeroSkuChart({ data }: HeroSkuChartProps) {
-  // Format data untuk mempermudah render label sumbu Y (menggabungkan nama dan ukuran)
-  const chartData = data.map(item => ({
-    ...item,
-    displayName: `${item.name} (${item.variant ? item.variant.split(' ')[0] : '-'})`, // Menggunakan kata pertama dari varian
-  }))
+  const chartData = data.map(item => {
+    const rawName = `${item.name} (${item.variant ? item.variant.split(' ')[0] : '-'})`;
+    const displayName = rawName.length > 22 ? rawName.substring(0, 20) + '...' : rawName;
+    return {
+      ...item,
+      displayName, // Menggunakan kata pertama dari varian
+    };
+  })
 
   return (
     <div className="w-full h-[400px]">
@@ -31,7 +34,7 @@ export default function HeroSkuChart({ data }: HeroSkuChartProps) {
           margin={{
             top: 20,
             right: 30,
-            left: 50,
+            left: 20,
             bottom: 5,
           }}
         >
@@ -42,7 +45,8 @@ export default function HeroSkuChart({ data }: HeroSkuChartProps) {
             type="category" 
             axisLine={false} 
             tickLine={false} 
-            tick={{ fill: '#475569', fontSize: 12, fontWeight: 500 }}
+            tick={{ fill: '#475569', fontSize: 11, fontWeight: 500 }}
+            width={140}
           />
           <Tooltip 
             cursor={{ fill: '#f1f5f9' }}
