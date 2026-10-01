@@ -80,7 +80,7 @@ export default function RiwayatTransaksiPage() {
         .eq('transaction_id', tx.id)
       
       if (error) throw error
-      setTxItems(data || [])
+      setTxItems((data as any) || [])
     } catch (err) {
       console.error('Failed to load tx items', err)
     } finally {
