@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { format } from 'date-fns'
+import { cancelTransaction } from '@/lib/supabase/transactionActions'
 
 interface Transaction {
   id: string
@@ -38,6 +39,7 @@ export default function RiwayatTransaksiPage() {
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null)
   const [txItems, setTxItems] = useState<TransactionItem[]>([])
   const [isModalLoading, setIsModalLoading] = useState(false)
+  const [isCancelling, setIsCancelling] = useState(false)
 
   const loadTransactions = async () => {
     setIsLoading(true)
@@ -48,7 +50,7 @@ export default function RiwayatTransaksiPage() {
         .gte('created_at', `${startDate}T00:00:00`)
         .lte('created_at', `${endDate}T23:59:59`)
         .order('created_at', { ascending: false })
-      
+
       const { data, error } = await query
       if (error) throw error
       setTransactions(data || [])
@@ -67,6 +69,35 @@ export default function RiwayatTransaksiPage() {
     loadTransactions()
   }
 
+  const handleCancelTx = async () => {
+    if (!selectedTx || selectedTx.status === 'cancelled') return
+
+    if (!confirm('Apakah Anda yakin ingin membatalkan transaksi ini? Stok produk akan dikembalikan dan total transaksi menjadi 0.')) {
+      return
+    }
+
+    setIsCancelling(true)
+    try {
+      await cancelTransaction(selectedTx.id)
+      alert('Transaksi berhasil dibatalkan.')
+
+      // Update local state
+      setTransactions(prev => prev.map(tx => {
+        if (tx.id === selectedTx.id) {
+          return { ...tx, status: 'cancelled', total_amount: 0 }
+        }
+        return tx
+      }))
+
+      closeDetails()
+    } catch (err: any) {
+      console.error('Gagal membatalkan transaksi', err)
+      alert(err?.message || 'Terjadi kesalahan saat membatalkan transaksi.')
+    } finally {
+      setIsCancelling(false)
+    }
+  }
+
   const openTxDetails = async (tx: Transaction) => {
     setSelectedTx(tx)
     setIsModalLoading(true)
@@ -78,7 +109,7 @@ export default function RiwayatTransaksiPage() {
           products ( name ), promotions ( name )
         `)
         .eq('transaction_id', tx.id)
-      
+
       if (error) throw error
       setTxItems((data as any) || [])
     } catch (err) {
@@ -93,7 +124,7 @@ export default function RiwayatTransaksiPage() {
     setTxItems([])
   }
 
-  const formatRupiah = (val: number) => 
+  const formatRupiah = (val: number) =>
     new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val)
 
   return (
@@ -107,8 +138,8 @@ export default function RiwayatTransaksiPage() {
         <div className="flex flex-col sm:flex-row gap-3 items-end">
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Mulai Tanggal</label>
-            <input 
-              type="date" 
+            <input
+              type="date"
               className="border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={startDate}
               onChange={e => setStartDate(e.target.value)}
@@ -116,14 +147,14 @@ export default function RiwayatTransaksiPage() {
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Sampai Tanggal</label>
-            <input 
-              type="date" 
+            <input
+              type="date"
               className="border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={endDate}
               onChange={e => setEndDate(e.target.value)}
             />
           </div>
-          <button 
+          <button
             onClick={handleSearch}
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition whitespace-nowrap"
           >
@@ -154,18 +185,17 @@ export default function RiwayatTransaksiPage() {
                 transactions.map((tx) => (
                   <tr key={tx.id} className="border-b border-slate-100 hover:bg-slate-50 transition cursor-pointer" onClick={() => openTxDetails(tx)}>
                     <td className="p-4 whitespace-nowrap">{format(new Date(tx.created_at), 'dd/MM/yyyy HH:mm')}</td>
-                    <td className="p-4 font-mono text-xs">{tx.id.substring(0,8)}...</td>
+                    <td className="p-4 font-mono text-xs">{tx.id.substring(0, 8)}...</td>
                     <td className="p-4">
                       <div className="font-medium text-slate-800">{tx.order_type || '-'}</div>
                       <div className="text-xs text-slate-500">{tx.payment_method}</div>
                     </td>
                     <td className="p-4 font-medium text-slate-800">{formatRupiah(tx.total_amount)}</td>
                     <td className="p-4">
-                      <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                        tx.status === 'completed' ? 'bg-green-100 text-green-700' :
-                        tx.status === 'pending' ? 'bg-orange-100 text-orange-700' :
-                        'bg-red-100 text-red-700'
-                      }`}>
+                      <span className={`px-2 py-1 rounded text-xs font-semibold ${tx.status === 'completed' ? 'bg-green-100 text-green-700' :
+                          tx.status === 'pending' ? 'bg-orange-100 text-orange-700' :
+                            'bg-red-100 text-red-700'
+                        }`}>
                         {tx.status.toUpperCase()}
                       </span>
                     </td>
@@ -194,7 +224,7 @@ export default function RiwayatTransaksiPage() {
               </div>
               <button onClick={closeDetails} className="text-slate-400 hover:text-slate-600 p-2 text-xl leading-none">✕</button>
             </div>
-            
+
             <div className="p-4 md:p-6 overflow-y-auto flex-1 bg-slate-50">
               {isModalLoading ? (
                 <div className="text-center py-8 text-slate-500">Memuat detail item...</div>
@@ -221,7 +251,7 @@ export default function RiwayatTransaksiPage() {
                       </div>
                     )
                   })}
-                  
+
                   <div className="pt-4 mt-4 border-t border-slate-200 space-y-2">
                     {selectedTx.shipping_fee ? (
                       <div className="flex justify-between items-center text-sm text-slate-600">
@@ -243,9 +273,18 @@ export default function RiwayatTransaksiPage() {
                 </div>
               )}
             </div>
-            
-            <div className="p-4 border-t border-slate-100 flex justify-end">
-              <button 
+
+            <div className="p-4 border-t border-slate-100 flex justify-end gap-3">
+              {selectedTx.status !== 'cancelled' && (
+                <button
+                  onClick={handleCancelTx}
+                  disabled={isCancelling}
+                  className="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 font-medium rounded-lg transition disabled:opacity-50"
+                >
+                  {isCancelling ? 'Membatalkan...' : 'Batalkan Transaksi'}
+                </button>
+              )}
+              <button
                 onClick={closeDetails}
                 className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg transition"
               >
