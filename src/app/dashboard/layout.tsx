@@ -24,6 +24,7 @@ export default function DashboardLayout({
     { name: 'Ringkasan Penjualan', path: '/dashboard' },
     { name: 'Katalog Produk', path: '/dashboard/katalog' },
     { name: 'Manajemen Promo', path: '/dashboard/promo' },
+    { name: 'Riwayat Transaksi', path: '/dashboard/transaksi' },
   ]
 
   return (
