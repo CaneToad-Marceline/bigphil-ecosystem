@@ -147,6 +147,76 @@ export async function cancelTransaction(transactionId: string) {
   }
 }
 
+export async function uncancelTransaction(transactionId: string) {
+  try {
+    // 0. Pastikan transaksi saat ini berstatus cancelled
+    const { data: currentTx, error: checkError } = await supabase
+      .from('transactions')
+      .select('status, shipping_fee, addon_fee')
+      .eq('id', transactionId)
+      .single()
+
+    if (checkError) throw checkError
+    if (currentTx.status !== 'cancelled') {
+      throw new Error("Hanya transaksi yang dibatalkan yang dapat dikembalikan.")
+    }
+
+    // 1. Tarik data transaction_items untuk menghitung ulang total dan memotong stok
+    const { data: items, error: fetchError } = await supabase
+      .from('transaction_items')
+      .select('product_id, quantity, price_at_time')
+      .eq('transaction_id', transactionId)
+
+    if (fetchError) throw fetchError
+
+    // 2. Hitung ulang total amount
+    let calculatedTotal = (currentTx.shipping_fee || 0) + (currentTx.addon_fee || 0)
+    if (items && items.length > 0) {
+      items.forEach(item => {
+        calculatedTotal += (item.quantity * item.price_at_time)
+      })
+    }
+
+    // 3. Update status transactions menjadi completed dan set total_amount kembali
+    const { error: txError } = await supabase
+      .from('transactions')
+      .update({ status: 'completed', total_amount: calculatedTotal })
+      .eq('id', transactionId)
+
+    if (txError) throw txError
+
+    // 4. Looping update stok pada tabel products (potong stok kembali)
+    if (items && items.length > 0) {
+      for (const item of items) {
+        if (item.product_id) {
+          // Ambil stok saat ini
+          const { data: product, error: pError } = await supabase
+            .from('products')
+            .select('stock_quantity')
+            .eq('id', item.product_id)
+            .single()
+
+          if (!pError && product) {
+            // Update dengan memotong stok
+            await supabase
+              .from('products')
+              .update({ stock_quantity: product.stock_quantity - item.quantity })
+              .eq('id', item.product_id)
+          }
+        }
+      }
+    }
+
+    return calculatedTotal
+  } catch (error: any) {
+    console.error("Error uncancelling transaction DETAIL:", {
+      message: error?.message,
+      fullError: JSON.stringify(error)
+    })
+    throw error
+  }
+}
+
 export async function getTransactionDetails(transactionId: string) {
   try {
     const { data: transaction, error: txError } = await supabase

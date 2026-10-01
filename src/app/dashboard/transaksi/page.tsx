@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { format } from 'date-fns'
-import { cancelTransaction } from '@/lib/supabase/transactionActions'
+import { cancelTransaction, uncancelTransaction } from '@/lib/supabase/transactionActions'
 
 interface Transaction {
   id: string
@@ -40,6 +40,7 @@ export default function RiwayatTransaksiPage() {
   const [txItems, setTxItems] = useState<TransactionItem[]>([])
   const [isModalLoading, setIsModalLoading] = useState(false)
   const [isCancelling, setIsCancelling] = useState(false)
+  const [isUncancelling, setIsUncancelling] = useState(false)
 
   const loadTransactions = async () => {
     setIsLoading(true)
@@ -95,6 +96,35 @@ export default function RiwayatTransaksiPage() {
       alert(err?.message || 'Terjadi kesalahan saat membatalkan transaksi.')
     } finally {
       setIsCancelling(false)
+    }
+  }
+
+  const handleUncancelTx = async () => {
+    if (!selectedTx || selectedTx.status !== 'cancelled') return
+    
+    if (!confirm('Apakah Anda yakin ingin mengembalikan transaksi ini? Stok produk akan dipotong kembali dan total transaksi akan dihitung ulang.')) {
+      return
+    }
+
+    setIsUncancelling(true)
+    try {
+      const newTotal = await uncancelTransaction(selectedTx.id)
+      alert('Transaksi berhasil dikembalikan (un-cancel).')
+      
+      // Update local state
+      setTransactions(prev => prev.map(tx => {
+        if (tx.id === selectedTx.id) {
+          return { ...tx, status: 'completed', total_amount: newTotal }
+        }
+        return tx
+      }))
+      
+      closeDetails()
+    } catch (err: any) {
+      console.error('Gagal mengembalikan transaksi', err)
+      alert(err?.message || 'Terjadi kesalahan saat mengembalikan transaksi.')
+    } finally {
+      setIsUncancelling(false)
     }
   }
 
@@ -275,6 +305,15 @@ export default function RiwayatTransaksiPage() {
             </div>
 
             <div className="p-4 border-t border-slate-100 flex justify-end gap-3">
+              {selectedTx.status === 'cancelled' && (
+                <button
+                  onClick={handleUncancelTx}
+                  disabled={isUncancelling}
+                  className="px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 font-medium rounded-lg transition disabled:opacity-50"
+                >
+                  {isUncancelling ? 'Mengembalikan...' : 'Kembalikan Transaksi'}
+                </button>
+              )}
               {selectedTx.status !== 'cancelled' && (
                 <button
                   onClick={handleCancelTx}
