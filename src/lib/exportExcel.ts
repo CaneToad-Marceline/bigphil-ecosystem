@@ -123,8 +123,12 @@ export const exportDashboardToExcel = async (
         itemName = item.products?.name || itemName;
       }
 
+      const tx = transactionsData?.find(t => t.id === item.transaction_id);
+
       return {
         'ID Transaksi': item.transaction_id,
+        'Tanggal': tx?.created_at ? format(new Date(tx.created_at), 'yyyy-MM-dd') : '-',
+        'Waktu': tx?.created_at ? format(new Date(tx.created_at), 'HH:mm:ss') : '-',
         'Nama Item': itemName,
         'Harga Satuan': item.price_at_time,
         'Jumlah': item.quantity,
@@ -136,7 +140,7 @@ export const exportDashboardToExcel = async (
       []
     ]);
     XLSX.utils.sheet_add_json(wsItems, itemsSheetData, { origin: 'A3' });
-    wsItems['!cols'] = [{ wch: 36 }, { wch: 40 }, { wch: 15 }, { wch: 10 }, { wch: 15 }];
+    wsItems['!cols'] = [{ wch: 36 }, { wch: 15 }, { wch: 10 }, { wch: 40 }, { wch: 15 }, { wch: 10 }, { wch: 15 }];
     XLSX.utils.book_append_sheet(wb, wsItems, 'Detail Item Pembelian');
 
     // Sheet 4: Leaderboard Produk (Hero SKUs)
