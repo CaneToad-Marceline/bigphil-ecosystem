@@ -145,7 +145,7 @@ export default function RiwayatTransaksiPage() {
                 <th className="p-4 text-right">Aksi</th>
               </tr>
             </thead>
-            <tbody className="text-sm">
+            <tbody className="text-sm text-slate-700">
               {isLoading ? (
                 <tr><td colSpan={6} className="p-8 text-center text-slate-500">Memuat data...</td></tr>
               ) : transactions.length === 0 ? (
